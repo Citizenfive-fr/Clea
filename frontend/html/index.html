@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cléa — La conformité RGPD, enfin accessible à tous</title>
+  <meta name="description" content="Cléa est un outil libre, open-source et auto-hébergé pour construire et gérer la conformité RGPD de votre entreprise, étape par étape." />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/main.css" />
+</head>
+<body>
+<div class="page">
+
+  <!-- Animated background -->
+  <div class="animated-bg" aria-hidden="true">
+<div class="orb orb--cyan"></div>
+    <div class="orb orb--pink"></div>
+    <div class="orb orb--teal"></div>
+  </div>
+
+  <!-- Navbar -->
+  <header class="navbar" id="navbar">
+    <nav class="navbar__inner">
+      <a href="/" class="navbar__brand">
+        <span class="navbar__logo" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+            <defs>
+              <linearGradient id="g-nav" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                <stop offset="0%"   stop-color="var(--brand-cyan)" />
+                <stop offset="55%"  stop-color="var(--brand-teal)" />
+                <stop offset="100%" stop-color="var(--brand-pink)" />
+              </linearGradient>
+            </defs>
+            <path d="M16 2a14 14 0 1 0 9.9 23.9l-3.2-3.1A9.6 9.6 0 1 1 22.7 9.2l3.2-3.1A14 14 0 0 0 16 2Z" fill="url(#g-nav)" />
+            <circle cx="16" cy="16" r="4.2" fill="url(#g-nav)" />
+          </svg>
+        </span>
+        <span class="navbar__name-wrap">
+          <span class="navbar__name">Cléa</span>
+          <span class="navbar__tagline"><b>C</b>onformité, <b>L</b>iberté, <b>É</b>quité, <b>A</b>ccessibilité</span>
+        </span>
+      </a>
+
+      <div class="navbar__center">
+        <a href="/" class="btn btn--ghost">Accueil</a>
+        <a href="/documentation" class="btn btn--ghost">Comprendre le RGPD</a>
+        <a href="/actualites" class="btn btn--ghost">Actualités</a>
+        <a href="/app" class="btn btn--primary">
+          Lancer l'app
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </a>
+      </div>
+
+      <div class="navbar__ctas">
+        <a href="/login" class="btn btn--ghost" id="navbar-auth-btn">Se connecter</a>
+        <a href="https://github.com/Citizenfivefr/Clea/" target="_blank" rel="noreferrer" class="btn btn--ghost navbar__github" title="GitHub" aria-label="GitHub">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+        </a>
+      </div>
+
+      <button type="button" id="navbar-toggle" class="navbar__toggle" aria-label="Ouvrir le menu" aria-expanded="false">
+        <svg id="icon-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="4" x2="20" y1="6"  y2="6"/>
+          <line x1="4" x2="20" y1="12" y2="12"/>
+          <line x1="4" x2="20" y1="18" y2="18"/>
+        </svg>
+        <svg id="icon-close" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
+          <path d="M18 6 6 18"/><path d="M6 6l12 12"/>
+        </svg>
+      </button>
+    </nav>
+
+    <div id="navbar-mobile" class="navbar__mobile" hidden>
+      <div class="navbar__mobile-inner">
+        <a href="/" class="navbar__mobile-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/></svg>
+          Accueil
+        </a>
+        <a href="/documentation" class="navbar__mobile-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H2v15h7c1.7 0 3 1.3 3 3V7c0-2.2-1.8-4-4-4Z"/><path d="M16 3h6v15h-7c-1.7 0-3 1.3-3 3V7c0-2.2 1.8-4 4-4Z"/></svg>
+          Comprendre le RGPD
+        </a>
+        <a href="/actualites" class="navbar__mobile-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10l6 6v8a2 2 0 0 1-2 2z"/><path d="M17 20v-8H7v8"/><path d="M7 4v4h8"/></svg>
+          Actualités
+        </a>
+        <div class="navbar__mobile-ctas">
+          <a href="https://github.com/Citizenfivefr/Clea/" target="_blank" rel="noreferrer" class="btn btn--outline" style="justify-content:center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+            GitHub
+          </a>
+          <a href="/login" class="btn btn--outline" style="justify-content:center">Se connecter</a>
+          <a href="/app" class="btn btn--primary" style="justify-content:center">
+            Lancer l'app
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero__content">
+        <h1 class="hero__h1">La conformité RGPD, enfin <span class="text-gradient" aria-hidden="true"><span id="typewriter-text"></span><span class="typewriter__cursor"></span></span><span class="sr-only" id="typewriter-sr">accessible</span>.</h1>
+
+        <p class="hero__desc">
+          Cléa est un outil <strong>libre</strong>, <strong>open-source</strong> et <strong>auto-hébergé</strong>
+          qui aide chaque entreprise à comprendre ses obligations et à les mettre en œuvre, pas à pas.
+        </p>
+
+        <div class="hero__ctas">
+          <a href="/app" class="btn btn--primary btn--lg hero__cta-primary">
+            Lancer l'outil de conformité
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+            </svg>
+          </a>
+          <a href="https://github.com/Citizenfivefr/Clea/" target="_blank" rel="noreferrer" class="btn btn--outline btn--lg">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+            Voir sur GitHub
+          </a>
+        </div>
+      </div>
+
+      <!-- Dashboard mockup -->
+      <div class="mockup">
+        <div class="mockup__glow" aria-hidden="true"></div>
+        <div class="mockup__window glass glow-border">
+          <div class="mockup__titlebar">
+            <span class="mockup__dot mockup__dot--red"></span>
+            <span class="mockup__dot mockup__dot--lime"></span>
+            <span class="mockup__dot mockup__dot--teal"></span>
+            <span class="mockup__title">cléa · tableau de bord de conformité</span>
+          </div>
+          <div class="mockup__grid">
+            <div class="mockup__card glass">
+              <div class="mockup__card-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
+                Score de conformité
+              </div>
+              <p class="mockup__card-value text-gradient">Fiable</p>
+              <div class="mockup__progress-track"><div class="mockup__progress-bar" style="width:75%"></div></div>
+            </div>
+            <div class="mockup__card glass">
+              <div class="mockup__card-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand-teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>
+                Registre des traitements
+              </div>
+              <p class="mockup__card-value">24</p>
+              <p class="mockup__card-sub">traitements documentés</p>
+            </div>
+            <div class="mockup__card glass">
+              <div class="mockup__card-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand-pink)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                Alertes actives
+              </div>
+              <p class="mockup__card-value">3</p>
+              <p class="mockup__card-sub">mises à jour à traiter</p>
+            </div>
+            <div class="mockup__card mockup__card--wide glass">
+              <div class="mockup__chart-header">
+                <span>Activité de conformité — 12 derniers mois</span>
+                <span class="mockup__chart-stat">+18%</span>
+              </div>
+              <div class="mockup__chart">
+                <div class="mockup__bar" style="height:62%"></div>
+                <div class="mockup__bar" style="height:78%"></div>
+                <div class="mockup__bar" style="height:45%"></div>
+                <div class="mockup__bar" style="height:90%"></div>
+                <div class="mockup__bar" style="height:70%"></div>
+                <div class="mockup__bar" style="height:84%"></div>
+                <div class="mockup__bar" style="height:58%"></div>
+                <div class="mockup__bar" style="height:96%"></div>
+                <div class="mockup__bar" style="height:74%"></div>
+                <div class="mockup__bar" style="height:88%"></div>
+                <div class="mockup__bar" style="height:66%"></div>
+                <div class="mockup__bar" style="height:92%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="mockup__shield" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- Trust bar -->
+    <section class="trust-bar">
+      <div class="trust-bar__inner">
+        <div class="trust-bar__item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          100% Open Source
+        </div>
+        <div class="trust-bar__item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>
+          Self-hosted
+        </div>
+        <div class="trust-bar__item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>
+          Aucune donnée envoyée
+        </div>
+        <div class="trust-bar__item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
+          RGPD by design
+        </div>
+        <div class="trust-bar__item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Communauté libre
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer__inner">
+      <a href="#" class="footer__brand">
+        <span class="navbar__logo" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+            <defs>
+              <linearGradient id="g-footer" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                <stop offset="0%"   stop-color="var(--brand-cyan)" />
+                <stop offset="55%"  stop-color="var(--brand-teal)" />
+                <stop offset="100%" stop-color="var(--brand-pink)" />
+              </linearGradient>
+            </defs>
+            <path d="M16 2a14 14 0 1 0 9.9 23.9l-3.2-3.1A9.6 9.6 0 1 1 22.7 9.2l3.2-3.1A14 14 0 0 0 16 2Z" fill="url(#g-footer)" />
+            <circle cx="16" cy="16" r="4.2" fill="url(#g-footer)" />
+          </svg>
+        </span>
+        <span class="footer__name">Cléa</span>
+      </a>
+      <p class="footer__tagline"><b>C</b>onformité, <b>L</b>iberté, <b>É</b>quité, <b>A</b>ccessibilité</p>
+      <nav class="footer__nav" aria-label="Liens du pied de page">
+        <a href="https://github.com/Citizenfivefr/Clea/" target="_blank" rel="noreferrer" class="footer__link">GitHub</a>
+        <a href="https://github.com/Citizenfivefr/Clea/blob/main/LICENSE" target="_blank" rel="noreferrer" class="footer__link">AGPL-3.0</a>
+      </nav>
+      <p class="footer__credit">
+        Made with
+        <svg class="footer__heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+        by the community
+      </p>
+    </div>
+  </footer>
+
+</div>
+<script src="/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+# Rust
+backend/target/
+
+# Env
+.env
+*.env
+
+# Logs
+server.log
+
+# Claude Code
+CLAUDE.md
+.claude/
+
+# OS
+.DS_Store
+
+# Notes locales
+TODO.md
+wiki/

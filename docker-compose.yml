@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: clea
+      POSTGRES_USER: clea
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    # Uncomment to access the DB directly from the host (dev only)
+    # ports:
+    #   - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clea"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    image: ghcr.io/citizenfivefr/clea:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgres://clea:${POSTGRES_PASSWORD}@db:5432/clea
+      APP_SECRET_KEY: ${APP_SECRET_KEY}
+      SECURE_COOKIES: "true"
+      SESSION_DURATION_HOURS: "24"
+      INVITATION_DURATION_HOURS: "72"
+
+volumes:
+  postgres_data:

@@ -1,0 +1,21 @@
+# Compiled artifacts (Docker recompile from scratch)
+backend/target/
+
+# Secrets
+.env
+*.env
+
+# Git / Forge
+.git/
+.gitignore
+.gitea/
+
+# Logs
+server.log
+
+# Claude Code
+CLAUDE.md
+.claude/
+
+# Docs
+*.md

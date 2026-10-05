@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mon profil — Cléa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    .page-wrap { max-width: 480px; margin: 0 auto; padding: 3rem 1.5rem; }
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; }
+    .page-title { font-size: 1.5rem; font-weight: 700; }
+    .back-link { color: var(--muted-fg); font-size: 0.875rem; display: flex; align-items: center; gap: 0.375rem; }
+    .back-link:hover { color: var(--fg); }
+    .info-block { margin-bottom: 2rem; padding: 1.25rem; border-radius: 10px; background: oklch(0.20 0.015 240); border: 1px solid var(--border); }
+    .info-label { font-size: 0.75rem; color: var(--muted-fg); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.375rem; }
+    .info-value { font-size: 0.95rem; font-weight: 500; }
+    .section-title { font-size: 1rem; font-weight: 600; margin-bottom: 1.25rem; }
+    .section-divider { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+    .field { display: flex; flex-direction: column; gap: 0.375rem; margin-bottom: 1rem; }
+    .field label { font-size: 0.875rem; font-weight: 500; }
+    .field input {
+      background: oklch(0.14 0.015 240); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.625rem 0.875rem;
+      font-size: 0.9rem; font-family: inherit; color: var(--fg); outline: none;
+    }
+    .field input:focus { border-color: var(--primary); }
+    .field input::placeholder { color: var(--muted-fg); }
+    .hint { font-size: 0.75rem; color: var(--muted-fg); }
+    .submit-btn { width: 100%; margin-top: 0.5rem; padding: 0.75rem; font-size: 0.95rem; font-weight: 600; }
+    .msg { border-radius: 8px; padding: 0.625rem 0.875rem; font-size: 0.85rem; margin-top: 1rem; display: none; }
+    .msg.error { background: oklch(0.25 0.06 15/60%); border: 1px solid oklch(0.45 0.12 15/60%); color: oklch(0.85 0.08 15); }
+    .msg.success { background: oklch(0.20 0.06 155/60%); border: 1px solid oklch(0.45 0.1 155/60%); color: oklch(0.85 0.08 155); }
+    .msg.visible { display: block; }
+
+    /* 2FA section */
+    .twofa-status {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.25rem; border-radius: 10px;
+      background: oklch(0.20 0.015 240); border: 1px solid var(--border);
+      margin-bottom: 1.25rem;
+    }
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      font-size: 0.85rem; font-weight: 600;
+    }
+    .status-badge.on  { color: oklch(0.75 0.14 155); }
+    .status-badge.off { color: var(--muted-fg); }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .status-dot.on  { background: oklch(0.75 0.14 155); }
+    .status-dot.off { background: var(--muted-fg); }
+    .twofa-setup-panel {
+      background: oklch(0.18 0.015 240); border: 1px solid var(--border);
+      border-radius: 10px; padding: 1.5rem; margin-bottom: 1.25rem;
+    }
+    .qr-wrap {
+      display: flex; flex-direction: column; align-items: center; gap: 1rem;
+      margin: 1.25rem 0;
+    }
+    .qr-wrap img { border-radius: 8px; }
+    .secret-code {
+      font-family: monospace; font-size: 0.85rem; letter-spacing: 0.08em;
+      background: oklch(0.13 0.01 240); border: 1px solid var(--border);
+      border-radius: 6px; padding: 0.5rem 0.75rem;
+      color: var(--brand-teal); word-break: break-all; text-align: center;
+    }
+    .secret-hint { font-size: 0.75rem; color: var(--muted-fg); text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="animated-bg" aria-hidden="true">
+      <div class="orb orb--cyan"></div>
+      <div class="orb orb--pink"></div>
+      <div class="orb orb--teal"></div>
+    </div>
+
+    <div class="page-wrap">
+      <div class="page-header">
+        <h1 class="page-title">Mon profil</h1>
+        <a href="/" class="back-link">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="m12 5-7 7 7 7"/></svg>
+          Accueil
+        </a>
+      </div>
+
+      <div class="info-block">
+        <div class="info-label">Email</div>
+        <div class="info-value" id="user-email">…</div>
+      </div>
+      <div class="info-block">
+        <div class="info-label">Rôle</div>
+        <div class="info-value" id="user-role">…</div>
+      </div>
+
+      <!-- Username -->
+      <p class="section-title">Nom d'utilisateur</p>
+      <form id="username-form" novalidate>
+        <div class="field">
+          <input id="username-input" type="text" placeholder="Votre nom d'utilisateur" maxlength="50" autocomplete="username">
+          <span class="hint">Affiché dans la navigation. 50 caractères max.</span>
+        </div>
+        <div class="msg error" id="username-error" role="alert"></div>
+        <div class="msg success" id="username-success" role="status"></div>
+        <button type="submit" class="btn submit-btn">Mettre à jour</button>
+      </form>
+
+      <hr class="section-divider">
+
+      <!-- 2FA section -->
+      <p class="section-title">Authentification à deux facteurs (2FA)</p>
+
+      <div class="twofa-status">
+        <div>
+          <div class="info-label" style="margin-bottom:0.25rem">Statut</div>
+          <div class="status-badge off" id="twofa-badge">
+            <span class="status-dot off" id="twofa-dot"></span>
+            <span id="twofa-badge-text">Non activée</span>
+          </div>
+        </div>
+        <div id="twofa-actions">
+          <button class="btn btn--outline" id="twofa-enable-btn" style="display:none" onclick="startSetup()">Activer</button>
+          <button class="btn btn--ghost" id="twofa-disable-btn" style="display:none" onclick="showDisableForm()">Désactiver</button>
+        </div>
+      </div>
+
+      <!-- Setup panel (QR + confirm) -->
+      <div class="twofa-setup-panel" id="twofa-setup-panel" style="display:none">
+        <p style="font-size:0.9rem;font-weight:600;margin-bottom:0.5rem">Configurer l'application d'authentification</p>
+        <p style="font-size:0.8rem;color:var(--muted-fg);margin-bottom:0">Scannez ce QR code avec Google Authenticator, Authy ou Bitwarden.</p>
+        <div class="qr-wrap">
+          <img id="twofa-qr" src="" alt="QR Code" width="180" height="180">
+          <div>
+            <p class="secret-hint" style="margin-bottom:0.375rem">Ou entrez manuellement :</p>
+            <div class="secret-code" id="twofa-secret"></div>
+          </div>
+        </div>
+        <p style="font-size:0.85rem;margin-bottom:0.5rem">Entrez le code affiché pour confirmer :</p>
+        <input id="twofa-confirm-code" type="text" inputmode="numeric" pattern="[0-9]{6}"
+               placeholder="000000" maxlength="6" autocomplete="one-time-code"
+               style="width:100%;box-sizing:border-box;background:oklch(0.14 0.015 240);border:1px solid var(--border);border-radius:8px;padding:0.625rem 0.875rem;font-size:1.1rem;font-family:inherit;color:var(--fg);outline:none;text-align:center;letter-spacing:0.4em;">
+        <button class="btn" style="width:100%;margin-top:0.75rem" onclick="confirmSetup()">Confirmer</button>
+        <div class="msg error" id="setup-error" role="alert"></div>
+        <button class="btn btn--ghost" style="width:100%;margin-top:0.75rem" onclick="cancelSetup()">Annuler</button>
+      </div>
+
+      <!-- Disable confirmation -->
+      <div class="twofa-setup-panel" id="twofa-disable-panel" style="display:none">
+        <p style="font-size:0.9rem;font-weight:600;margin-bottom:0.75rem">Désactiver la 2FA</p>
+        <div class="field">
+          <label for="disable-password">Mot de passe actuel</label>
+          <input id="disable-password" type="password" autocomplete="current-password">
+        </div>
+        <div class="msg error" id="disable-error" role="alert"></div>
+        <button class="btn" style="width:100%;margin-top:0.25rem" onclick="confirmDisable()">Confirmer la désactivation</button>
+        <button class="btn btn--ghost" style="width:100%;margin-top:0.5rem" onclick="cancelDisable()">Annuler</button>
+      </div>
+
+      <div class="msg success" id="twofa-success" role="status"></div>
+
+      <hr class="section-divider">
+
+      <!-- Admin: team management -->
+      <div id="admin-section" style="display:none">
+        <p class="section-title">Administration de l'équipe</p>
+        <a href="/team" class="btn btn--outline" style="display:inline-flex;align-items:center;gap:0.5rem">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Gérer l'équipe
+        </a>
+        <hr class="section-divider">
+      </div>
+
+      <!-- Password change -->
+      <p class="section-title">Changer le mot de passe</p>
+      <form id="pw-form" novalidate>
+        <div class="field">
+          <label for="current_password">Mot de passe actuel</label>
+          <input id="current_password" type="password" autocomplete="current-password" required>
+        </div>
+        <div class="field">
+          <label for="new_password">Nouveau mot de passe</label>
+          <input id="new_password" type="password" placeholder="12 caractères minimum" autocomplete="new-password" required>
+          <span class="hint">12 caractères minimum.</span>
+        </div>
+        <div class="field">
+          <label for="new_password_confirm">Confirmer</label>
+          <input id="new_password_confirm" type="password" autocomplete="new-password" required>
+        </div>
+        <div class="msg error" id="pw-error" role="alert"></div>
+        <div class="msg success" id="pw-success" role="status"></div>
+        <button type="submit" class="btn submit-btn">Mettre à jour</button>
+      </form>
+
+      <hr class="section-divider">
+      <button class="btn btn--ghost" style="width:100%;color:oklch(0.7 0.1 15)" onclick="logout()">Se déconnecter</button>
+    </div>
+  </div>
+
+  <script>
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+      window.location.href = '/login';
+    }
+
+    let totpEnabled = false;
+
+    // Load user info
+    fetch('/api/auth/me')
+      .then(r => { if (!r.ok) window.location.href = '/login'; return r.json(); })
+      .then(u => {
+        document.getElementById('user-email').textContent = u.email;
+        document.getElementById('user-role').textContent = u.role;
+        if (u.username) document.getElementById('username-input').value = u.username;
+        totpEnabled = u.totp_enabled;
+        renderTotpStatus();
+        if (u.role !== 'member') document.getElementById('admin-section').style.display = '';
+      })
+      .catch(() => window.location.href = '/login');
+
+    function renderTotpStatus() {
+      const badge    = document.getElementById('twofa-badge');
+      const dot      = document.getElementById('twofa-dot');
+      const badgeTxt = document.getElementById('twofa-badge-text');
+      const enableBtn  = document.getElementById('twofa-enable-btn');
+      const disableBtn = document.getElementById('twofa-disable-btn');
+
+      if (totpEnabled) {
+        badge.className = 'status-badge on';
+        dot.className = 'status-dot on';
+        badgeTxt.textContent = 'Activée';
+        enableBtn.style.display = 'none';
+        disableBtn.style.display = '';
+      } else {
+        badge.className = 'status-badge off';
+        dot.className = 'status-dot off';
+        badgeTxt.textContent = 'Non activée';
+        enableBtn.style.display = '';
+        disableBtn.style.display = 'none';
+      }
+    }
+
+    async function startSetup() {
+      document.getElementById('twofa-enable-btn').disabled = true;
+      try {
+        const res = await fetch('/api/auth/2fa/setup', { method: 'POST' });
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Erreur');
+        const data = await res.json();
+        document.getElementById('twofa-qr').src = 'data:image/png;base64,' + data.qr;
+        document.getElementById('twofa-secret').textContent = data.secret;
+        document.getElementById('twofa-setup-panel').style.display = '';
+        document.getElementById('twofa-confirm-code').focus();
+      } catch (e) {
+        alert(e.message);
+      } finally {
+        document.getElementById('twofa-enable-btn').disabled = false;
+      }
+    }
+
+    async function confirmSetup() {
+      const errEl = document.getElementById('setup-error');
+      errEl.classList.remove('visible');
+      const code = document.getElementById('twofa-confirm-code').value.trim();
+      if (code.length !== 6) {
+        errEl.textContent = 'Le code doit contenir 6 chiffres.';
+        errEl.classList.add('visible'); return;
+      }
+      try {
+        const res = await fetch('/api/auth/2fa/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code }),
+        });
+        if (res.status === 204) {
+          totpEnabled = true;
+          document.getElementById('twofa-setup-panel').style.display = 'none';
+          document.getElementById('twofa-confirm-code').value = '';
+          renderTotpStatus();
+          const ok = document.getElementById('twofa-success');
+          ok.textContent = '2FA activée avec succès.';
+          ok.classList.add('visible');
+          setTimeout(() => ok.classList.remove('visible'), 4000);
+          return;
+        }
+        const data = await res.json().catch(() => ({}));
+        errEl.textContent = data.error || 'Code incorrect.';
+        errEl.classList.add('visible');
+      } catch {
+        errEl.textContent = 'Erreur réseau.';
+        errEl.classList.add('visible');
+      }
+    }
+
+    function cancelSetup() {
+      document.getElementById('twofa-setup-panel').style.display = 'none';
+      document.getElementById('twofa-confirm-code').value = '';
+      document.getElementById('setup-error').classList.remove('visible');
+    }
+
+    function showDisableForm() {
+      document.getElementById('twofa-disable-panel').style.display = '';
+      document.getElementById('disable-password').focus();
+    }
+
+    async function confirmDisable() {
+      const errEl = document.getElementById('disable-error');
+      errEl.classList.remove('visible');
+      const password = document.getElementById('disable-password').value;
+      if (!password) {
+        errEl.textContent = 'Le mot de passe est requis.';
+        errEl.classList.add('visible'); return;
+      }
+      try {
+        const res = await fetch('/api/auth/2fa/disable', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password }),
+        });
+        if (res.status === 204) {
+          totpEnabled = false;
+          document.getElementById('twofa-disable-panel').style.display = 'none';
+          document.getElementById('disable-password').value = '';
+          renderTotpStatus();
+          const ok = document.getElementById('twofa-success');
+          ok.textContent = '2FA désactivée.';
+          ok.classList.add('visible');
+          setTimeout(() => ok.classList.remove('visible'), 4000);
+          return;
+        }
+        const data = await res.json().catch(() => ({}));
+        errEl.textContent = data.error || 'Erreur.';
+        errEl.classList.add('visible');
+      } catch {
+        errEl.textContent = 'Erreur réseau.';
+        errEl.classList.add('visible');
+      }
+    }
+
+    function cancelDisable() {
+      document.getElementById('twofa-disable-panel').style.display = 'none';
+      document.getElementById('disable-password').value = '';
+      document.getElementById('disable-error').classList.remove('visible');
+    }
+
+    // Allow Enter key in TOTP confirm input
+    document.getElementById('twofa-confirm-code').addEventListener('keydown', e => {
+      if (e.key === 'Enter') confirmSetup();
+    });
+
+    // Username form
+    document.getElementById('username-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const errEl = document.getElementById('username-error');
+      const okEl  = document.getElementById('username-success');
+      errEl.classList.remove('visible');
+      okEl.classList.remove('visible');
+
+      const username = document.getElementById('username-input').value.trim();
+      if (!username) {
+        errEl.textContent = 'Le nom d\'utilisateur ne peut pas être vide.';
+        errEl.classList.add('visible'); return;
+      }
+
+      const btn = e.target.querySelector('button[type="submit"]');
+      btn.disabled = true; btn.textContent = 'Mise à jour…';
+
+      try {
+        const res = await fetch('/api/auth/username', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username }),
+        });
+        if (res.status === 204) {
+          okEl.textContent = 'Nom d\'utilisateur mis à jour.';
+          okEl.classList.add('visible');
+          setTimeout(() => okEl.classList.remove('visible'), 4000);
+          return;
+        }
+        const data = await res.json().catch(() => ({}));
+        errEl.textContent = data.error || 'Une erreur est survenue.';
+        errEl.classList.add('visible');
+      } catch {
+        errEl.textContent = 'Impossible de contacter le serveur.';
+        errEl.classList.add('visible');
+      } finally {
+        btn.disabled = false; btn.textContent = 'Mettre à jour';
+      }
+    });
+
+    // Password change form
+    document.getElementById('pw-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const errEl = document.getElementById('pw-error');
+      const okEl  = document.getElementById('pw-success');
+      errEl.classList.remove('visible');
+      okEl.classList.remove('visible');
+
+      const current_password = document.getElementById('current_password').value;
+      const new_password     = document.getElementById('new_password').value;
+      const confirm          = document.getElementById('new_password_confirm').value;
+
+      if (new_password.length < 12) {
+        errEl.textContent = 'Le nouveau mot de passe doit contenir au moins 12 caractères.';
+        errEl.classList.add('visible'); return;
+      }
+      if (new_password !== confirm) {
+        errEl.textContent = 'Les mots de passe ne correspondent pas.';
+        errEl.classList.add('visible'); return;
+      }
+
+      const btn = e.target.querySelector('button[type="submit"]');
+      btn.disabled = true; btn.textContent = 'Mise à jour…';
+
+      try {
+        const res = await fetch('/api/auth/password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ current_password, new_password }),
+        });
+
+        if (res.status === 204) {
+          okEl.textContent = 'Mot de passe mis à jour. Vous allez être déconnecté(e)…';
+          okEl.classList.add('visible');
+          e.target.reset();
+          setTimeout(() => window.location.href = '/login', 2000);
+          return;
+        }
+        const data = await res.json().catch(() => ({}));
+        errEl.textContent = data.error || 'Une erreur est survenue.';
+        errEl.classList.add('visible');
+      } catch {
+        errEl.textContent = 'Impossible de contacter le serveur.';
+        errEl.classList.add('visible');
+      } finally {
+        btn.disabled = false; btn.textContent = 'Mettre à jour';
+      }
+    });
+  </script>
+</body>
+</html>

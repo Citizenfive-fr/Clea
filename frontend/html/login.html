@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connexion — Cléa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    .login-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .login-card {
+      width: 100%;
+      max-width: 400px;
+      padding: 2.5rem;
+    }
+    .login-logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--brand-teal);
+      -webkit-text-fill-color: var(--brand-teal);
+      margin-bottom: 0.25rem;
+    }
+    .login-subtitle {
+      color: var(--muted-fg);
+      font-size: 0.875rem;
+      margin-bottom: 2rem;
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+      margin-bottom: 1rem;
+    }
+    .field label {
+      font-size: 0.875rem;
+      color: var(--fg);
+      font-weight: 500;
+    }
+    .field input {
+      background: oklch(0.14 0.015 240);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.625rem 0.875rem;
+      font-size: 0.9rem;
+      font-family: inherit;
+      color: var(--fg);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .field input:focus { border-color: var(--primary); }
+    .field input::placeholder { color: var(--muted-fg); }
+    .totp-input {
+      text-align: center;
+      font-size: 1.5rem;
+      letter-spacing: 0.4em;
+      font-variant-numeric: tabular-nums;
+    }
+    .login-btn {
+      width: 100%;
+      margin-top: 1.5rem;
+      padding: 0.75rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+    .back-btn {
+      width: 100%;
+      margin-top: 0.5rem;
+    }
+    .login-error {
+      background: oklch(0.25 0.06 15 / 60%);
+      border: 1px solid oklch(0.45 0.12 15 / 60%);
+      color: oklch(0.85 0.08 15);
+      border-radius: 8px;
+      padding: 0.625rem 0.875rem;
+      font-size: 0.85rem;
+      margin-top: 1rem;
+      display: none;
+    }
+    .login-error.visible { display: block; }
+    .totp-hint {
+      font-size: 0.8rem;
+      color: var(--muted-fg);
+      text-align: center;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+  <div class="animated-bg" aria-hidden="true">
+    <div class="orb orb--cyan"></div>
+    <div class="orb orb--pink"></div>
+    <div class="orb orb--teal"></div>
+  </div>
+
+  <div class="login-wrap">
+    <div class="card login-card">
+
+      <!-- Step 1: credentials -->
+      <div id="step-credentials">
+        <div class="login-logo">Cléa</div>
+        <p class="login-subtitle">Connectez-vous à votre espace.</p>
+
+        <form id="login-form" novalidate>
+          <div class="field">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email"
+                   placeholder="admin@exemple.fr" autocomplete="email" required>
+          </div>
+          <div class="field">
+            <label for="password">Mot de passe</label>
+            <input id="password" name="password" type="password"
+                   autocomplete="current-password" required>
+          </div>
+          <div class="login-error" id="login-error" role="alert"></div>
+          <button type="submit" class="btn login-btn">Se connecter</button>
+        </form>
+      </div>
+
+      <!-- Step 2: TOTP code -->
+      <div id="step-totp" style="display:none">
+        <div class="login-logo">Cléa</div>
+        <p class="login-subtitle">Vérification en deux étapes.</p>
+
+        <div class="field">
+          <label for="totp-code">Code de vérification</label>
+          <input id="totp-code" type="text" inputmode="numeric" pattern="[0-9]{6}"
+                 placeholder="000000" autocomplete="one-time-code" maxlength="6"
+                 class="totp-input">
+        </div>
+        <p class="totp-hint">Entrez le code affiché par votre application d'authentification.</p>
+        <div class="login-error" id="totp-error" role="alert"></div>
+        <button type="button" class="btn login-btn" id="totp-submit">Vérifier</button>
+        <button type="button" class="btn btn--ghost back-btn" id="totp-back">Retour</button>
+      </div>
+
+    </div>
+  </div>
+  </div><!-- /.page -->
+
+  <script>
+    let pendingToken = null;
+
+    const stepCreds = document.getElementById('step-credentials');
+    const stepTotp  = document.getElementById('step-totp');
+    const loginErr  = document.getElementById('login-error');
+    const totpErr   = document.getElementById('totp-error');
+
+    function showLoginError(msg) {
+      loginErr.textContent = msg;
+      loginErr.classList.add('visible');
+    }
+    function showTotpError(msg) {
+      totpErr.textContent = msg;
+      totpErr.classList.add('visible');
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      loginErr.classList.remove('visible');
+
+      const email    = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      if (!email || !password) return showLoginError("Tous les champs sont requis.");
+
+      const btn = e.target.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = 'Connexion…';
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+
+        if (res.status === 202) {
+          const data = await res.json();
+          pendingToken = data.pending_token;
+          stepCreds.style.display = 'none';
+          stepTotp.style.display = '';
+          document.getElementById('totp-code').focus();
+          return;
+        }
+        if (res.ok) {
+          window.location.href = '/';
+          return;
+        }
+        const data = await res.json().catch(() => ({}));
+        showLoginError(data.error || "Une erreur est survenue.");
+      } catch {
+        showLoginError("Impossible de contacter le serveur.");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Se connecter';
+      }
+    });
+
+    document.getElementById('totp-submit').addEventListener('click', async () => {
+      totpErr.classList.remove('visible');
+      const code = document.getElementById('totp-code').value.trim();
+      if (code.length !== 6) return showTotpError("Le code doit contenir 6 chiffres.");
+
+      const btn = document.getElementById('totp-submit');
+      btn.disabled = true;
+      btn.textContent = 'Vérification…';
+
+      try {
+        const res = await fetch('/api/auth/2fa/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pending_token: pendingToken, code }),
+        });
+
+        if (res.ok) {
+          window.location.href = '/';
+          return;
+        }
+        const data = await res.json().catch(() => ({}));
+        showTotpError(data.error || "Code incorrect.");
+      } catch {
+        showTotpError("Impossible de contacter le serveur.");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Vérifier';
+      }
+    });
+
+    // Allow Enter key in TOTP input
+    document.getElementById('totp-code').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('totp-submit').click();
+    });
+
+    document.getElementById('totp-back').addEventListener('click', () => {
+      pendingToken = null;
+      document.getElementById('totp-code').value = '';
+      totpErr.classList.remove('visible');
+      stepTotp.style.display = 'none';
+      stepCreds.style.display = '';
+    });
+  </script>
+</body>
+</html>

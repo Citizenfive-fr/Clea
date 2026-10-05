@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tableau de bord — Cléa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    .dash-wrap { max-width: var(--max-w); margin: 0 auto; padding: 7rem var(--px) 5rem; }
+
+    .dash-header {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 1rem; flex-wrap: wrap; margin-bottom: 2.5rem;
+    }
+    .dash-header__greeting { font-size: 1.5rem; font-weight: 700; }
+    .dash-header__sub { margin-top: 0.25rem; font-size: 0.875rem; color: var(--muted-fg); }
+    .dash-header__actions { display: flex; gap: 0.625rem; flex-wrap: wrap; }
+
+    /* Stat cards — réutilise le langage visuel du mockup de la landing page */
+    .dash-stats { display: grid; gap: 1rem; margin-bottom: 2.5rem; }
+    .dash-stat { border-radius: 0.75rem; padding: 1.25rem; display: flex; flex-direction: column; }
+    .dash-stat__body { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+    .dash-stat--wide { grid-column: 1 / -1; }
+
+    /* Module shortcuts */
+    .dash-section-title {
+      font-size: 0.875rem; font-weight: 600; color: var(--muted-fg);
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem;
+    }
+    .dash-modules {
+      display: grid; gap: 1rem; margin-bottom: 2.5rem;
+      grid-template-columns: 1fr;
+    }
+    .dash-module {
+      position: relative; display: block;
+      border-radius: 1rem; padding: 1.5rem;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .dash-module:not(.dash-module--soon):hover { transform: translateY(-3px); }
+    .dash-module--soon { cursor: default; opacity: 0.55; }
+    .dash-module__icon {
+      display: inline-flex; width: 2.75rem; height: 2.75rem;
+      align-items: center; justify-content: center;
+      border-radius: 0.75rem; border: 1px solid var(--border);
+      background-color: color-mix(in oklch, var(--card) 60%, transparent);
+    }
+    .dash-module__title { margin-top: 1rem; font-size: 1rem; font-weight: 600; }
+    .dash-module__desc { margin-top: 0.375rem; font-size: 0.825rem; line-height: 1.55; color: var(--muted-fg); }
+    .dash-module__badge {
+      position: absolute; top: 1.25rem; right: 1.25rem;
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--muted-fg); border: 1px solid var(--border); border-radius: 999px;
+      padding: 0.15rem 0.55rem;
+    }
+
+    @media (min-width: 640px) {
+      .dash-stats { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (min-width: 768px) {
+      .dash-modules { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (min-width: 1024px) {
+      .dash-stats { grid-template-columns: repeat(4, 1fr); }
+    }
+    @media (min-width: 1024px) {
+      .dash-modules { grid-template-columns: repeat(3, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="animated-bg" aria-hidden="true">
+      <div class="orb orb--cyan"></div>
+      <div class="orb orb--pink"></div>
+      <div class="orb orb--teal"></div>
+    </div>
+
+    <div class="dash-wrap">
+      <div class="dash-header">
+        <div>
+          <p class="dash-header__greeting" id="greeting">Bonjour 👋</p>
+          <p class="dash-header__sub">Voici l'état de la conformité de ton entreprise.</p>
+        </div>
+        <div class="dash-header__actions">
+          <a href="/" class="btn btn--ghost">Retour à l'accueil</a>
+          <a href="/profile" class="btn btn--ghost">Mon compte</a>
+        </div>
+      </div>
+
+      <div class="dash-stats">
+        <div class="dash-stat glass">
+          <div class="mockup__card-label">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
+            Score de conformité
+          </div>
+          <div class="dash-stat__body">
+            <p class="mockup__card-value text-gradient">Non évalué</p>
+            <div class="mockup__progress-track"><div class="mockup__progress-bar" style="width:0%"></div></div>
+            <p class="mockup__card-sub" style="margin-top:0.5rem">Calculé une fois ton registre des traitements démarré.</p>
+          </div>
+        </div>
+        <div class="dash-stat glass">
+          <div class="mockup__card-label">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand-teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>
+            Registre des traitements
+          </div>
+          <div class="dash-stat__body">
+            <p class="mockup__card-value">0</p>
+            <p class="mockup__card-sub">traitement documenté</p>
+          </div>
+        </div>
+        <div class="dash-stat glass">
+          <div class="mockup__card-label">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand-pink)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Membres de l'équipe
+          </div>
+          <div class="dash-stat__body">
+            <p class="mockup__card-value" id="team-count">—</p>
+            <p class="mockup__card-sub">dans ton entreprise</p>
+          </div>
+        </div>
+        <div class="dash-stat glass">
+          <div class="mockup__card-label">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand-lime)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+            Alertes actives
+          </div>
+          <div class="dash-stat__body">
+            <p class="mockup__card-value">0</p>
+            <p class="mockup__card-sub">mise à jour à traiter</p>
+          </div>
+        </div>
+      </div>
+
+      <p class="dash-section-title">Modules</p>
+      <div class="dash-modules">
+        <div class="dash-module glass dash-module--soon">
+          <span class="dash-module__badge">Bientôt</span>
+          <span class="dash-module__icon" style="color:var(--brand-cyan)" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>
+          </span>
+          <p class="dash-module__title">Registre des traitements</p>
+          <p class="dash-module__desc">Recense tes traitements de données : finalité, base légale, durée de conservation.</p>
+        </div>
+
+        <div class="dash-module glass dash-module--soon">
+          <span class="dash-module__badge">Bientôt</span>
+          <span class="dash-module__icon" style="color:var(--brand-pink)" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+          </span>
+          <p class="dash-module__title">AIPD guidée</p>
+          <p class="dash-module__desc">Évalue si un traitement nécessite une analyse d'impact, pas à pas.</p>
+        </div>
+
+        <div class="dash-module glass dash-module--soon">
+          <span class="dash-module__badge">Bientôt</span>
+          <span class="dash-module__icon" style="color:var(--brand-teal)" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </span>
+          <p class="dash-module__title">Gestion des droits</p>
+          <p class="dash-module__desc">Suis les demandes d'accès, de rectification, d'effacement et de portabilité.</p>
+        </div>
+
+        <div class="dash-module glass dash-module--soon">
+          <span class="dash-module__badge">Bientôt</span>
+          <span class="dash-module__icon" style="color:var(--brand-pink)" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
+          </span>
+          <p class="dash-module__title">Sous-traitance</p>
+          <p class="dash-module__desc">Tes prestataires et tes éventuelles missions pour le compte de clients.</p>
+        </div>
+
+        <a href="/documentation" class="dash-module glass">
+          <span class="dash-module__icon" style="color:var(--brand-teal)" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H2v15h7c1.7 0 3 1.3 3 3V7c0-2.2-1.8-4-4-4Z"/><path d="M16 3h6v15h-7c-1.7 0-3 1.3-3 3V7c0-2.2 1.8-4 4-4Z"/></svg>
+          </span>
+          <p class="dash-module__title">Comprendre le RGPD</p>
+          <p class="dash-module__desc">Revois les notions clés du règlement, à ton rythme.</p>
+        </a>
+
+        <a href="/actualites" class="dash-module glass">
+          <span class="dash-module__icon" style="color:var(--brand-pink)" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10l6 6v8a2 2 0 0 1-2 2z"/><path d="M17 20v-8H7v8"/><path d="M7 4v4h8"/></svg>
+          </span>
+          <p class="dash-module__title">Actualités</p>
+          <p class="dash-module__desc">Les dernières publications de la CNIL et de l'EDPB.</p>
+        </a>
+      </div>
+
+      <div class="dash-stat dash-stat--wide glass" style="margin-top:1rem">
+        <div class="mockup__chart-header">
+          <span>Activité de conformité — 12 derniers mois</span>
+        </div>
+        <div class="mockup__chart" style="position:relative">
+          <div class="mockup__bar" style="height:4%"></div>
+          <div class="mockup__bar" style="height:4%"></div>
+          <div class="mockup__bar" style="height:4%"></div>
+          <div class="mockup__bar" style="height:4%"></div>
+          <div class="mockup__bar" style="height:4%"></div>
+          <div class="mockup__bar" style="height:4%"></div>
+          <div class="mockup__bar" style="height:4%"></div>
+          <div class="mockup__bar" style="height:4%"></div>
+          <div class="mockup__bar" style="height:4%"></div>
+          <div class="mockup__bar" style="height:4%"></div>
+          <div class="mockup__bar" style="height:4%"></div>
+          <div class="mockup__bar" style="height:4%"></div>
+          <p class="mockup__card-sub" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center">Pas encore de données, débute l'activité de conformité.</p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      fetch('/api/auth/me')
+        .then(r => { if (!r.ok) { window.location.href = '/login'; return null; } return r.json(); })
+        .then(u => {
+          if (!u) return;
+          const name = u.username || u.email.split('@')[0];
+          document.getElementById('greeting').textContent = `Bonjour, ${name} 👋`;
+
+          if (u.role !== 'member') {
+            loadTeamCount();
+          }
+        })
+        .catch(() => window.location.href = '/login');
+
+      function loadTeamCount() {
+        fetch('/api/users')
+          .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+          .then(users => { document.getElementById('team-count').textContent = users.length; })
+          .catch(() => {});
+      }
+    </script>
+  </div>
+</body>
+</html>

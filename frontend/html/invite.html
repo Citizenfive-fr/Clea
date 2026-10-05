@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rejoindre l'équipe — Cléa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    .invite-wrap {
+      min-height: 100vh; display: flex;
+      align-items: center; justify-content: center; padding: 2rem;
+    }
+    .invite-card { width: 100%; max-width: 400px; padding: 2.5rem; }
+    .invite-logo {
+      font-size: 1.5rem; font-weight: 700;
+      color: var(--brand-teal); margin-bottom: 0.25rem;
+    }
+    .invite-subtitle { color: var(--muted-fg); font-size: 0.875rem; margin-bottom: 2rem; }
+    .field { display: flex; flex-direction: column; gap: 0.375rem; margin-bottom: 1rem; }
+    .field label { font-size: 0.875rem; font-weight: 500; }
+    .field input {
+      background: oklch(0.14 0.015 240); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.625rem 0.875rem;
+      font-size: 0.9rem; font-family: inherit; color: var(--fg); outline: none;
+    }
+    .field input:focus { border-color: var(--primary); }
+    .field input::placeholder { color: var(--muted-fg); }
+    .hint { font-size: 0.75rem; color: var(--muted-fg); }
+    .invite-btn { width: 100%; margin-top: 1.5rem; padding: 0.75rem; font-size: 0.95rem; font-weight: 600; }
+    .msg {
+      border-radius: 8px; padding: 0.625rem 0.875rem;
+      font-size: 0.85rem; margin-top: 1rem; display: none;
+    }
+    .msg.error { background: oklch(0.25 0.06 15/60%); border: 1px solid oklch(0.45 0.12 15/60%); color: oklch(0.85 0.08 15); }
+    .msg.visible { display: block; }
+    .invalid-wrap { text-align: center; padding: 1rem 0; color: var(--muted-fg); }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="animated-bg" aria-hidden="true">
+      <div class="orb orb--cyan"></div>
+      <div class="orb orb--pink"></div>
+      <div class="orb orb--teal"></div>
+    </div>
+
+    <div class="invite-wrap">
+      <div class="card invite-card" id="invite-card">
+        <div class="invite-logo">Cléa</div>
+        <p class="invite-subtitle">Vous avez été invité(e) à rejoindre l'équipe. Choisissez un mot de passe pour activer votre compte.</p>
+
+        <form id="invite-form" novalidate>
+          <div class="field">
+            <label for="password">Mot de passe</label>
+            <input id="password" type="password" placeholder="12 caractères minimum" autocomplete="new-password" required>
+            <span class="hint">12 caractères minimum.</span>
+          </div>
+          <div class="field">
+            <label for="password_confirm">Confirmer</label>
+            <input id="password_confirm" type="password" autocomplete="new-password" required>
+          </div>
+          <div class="msg error" id="form-error" role="alert"></div>
+          <button type="submit" class="btn invite-btn">Activer mon compte</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const token  = params.get('token');
+
+    function showInvalid(msg) {
+      document.getElementById('invite-card').innerHTML =
+        `<div class="invalid-wrap">${msg}</div>`;
+    }
+
+    if (!token) {
+      showInvalid('Lien d\'invitation invalide.');
+    } else {
+      fetch(`/api/invitations/check?token=${encodeURIComponent(token)}`)
+        .then(r => {
+          if (!r.ok) showInvalid('Ce lien d\'invitation a déjà été utilisé ou a expiré.');
+        })
+        .catch(() => showInvalid('Impossible de vérifier l\'invitation.'));
+    }
+
+    document.getElementById('invite-form')?.addEventListener('submit', async e => {
+      e.preventDefault();
+      const errEl    = document.getElementById('form-error');
+      const password = document.getElementById('password').value;
+      const confirm  = document.getElementById('password_confirm').value;
+      errEl.classList.remove('visible');
+
+      if (password.length < 12) {
+        errEl.textContent = 'Le mot de passe doit contenir au moins 12 caractères.';
+        errEl.classList.add('visible'); return;
+      }
+      if (password !== confirm) {
+        errEl.textContent = 'Les mots de passe ne correspondent pas.';
+        errEl.classList.add('visible'); return;
+      }
+
+      const btn = e.target.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = 'Activation…';
+
+      try {
+        const res = await fetch('/api/invitations/accept', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, password }),
+        });
+        if (res.status === 201) {
+          window.location.href = '/login';
+          return;
+        }
+        const data = await res.json().catch(() => ({}));
+        errEl.textContent = data.error || 'Une erreur est survenue.';
+        errEl.classList.add('visible');
+      } catch {
+        errEl.textContent = 'Impossible de contacter le serveur.';
+        errEl.classList.add('visible');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Activer mon compte';
+      }
+    });
+  </script>
+</body>
+</html>

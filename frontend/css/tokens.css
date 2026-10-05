@@ -1,0 +1,35 @@
+/* =============================================
+   CLÉA — DESIGN TOKENS
+   Palette complète en OKLCH.
+   Modifier ici pour propager sur toute l'app.
+   ============================================= */
+:root {
+
+  /* --- Couleurs de marque --- */
+  --brand-cyan:  oklch(0.70 0.12 215);   /* bleu glacier doux     */
+  --brand-teal:  oklch(0.72 0.14 155);   /* vert aurore atténué   */
+  --brand-pink:  oklch(0.58 0.16 290);   /* violet arctique sobre */
+  --brand-lime:  oklch(0.82 0.08 200);   /* bleu givre pâle       */
+
+  /* --- Surfaces --- */
+  --bg:          oklch(0.17 0.02 240);   /* fond principal (ardoise sombre)  */
+  --card:        oklch(0.21 0.018 240);  /* fond carte / panneau             */
+  --muted:       oklch(0.25 0.015 240);  /* fond subtil (hover, inactif)     */
+
+  /* --- Texte --- */
+  --fg:          oklch(0.96 0.005 230);  /* texte principal     */
+  --muted-fg:    oklch(0.62 0.015 235);  /* texte secondaire    */
+
+  /* --- Bordures --- */
+  --border:      oklch(0.99 0 0 / 8%);   /* bordure subtile     */
+
+  /* --- Composants --- */
+  --primary:     oklch(0.70 0.12 215);   /* = brand-cyan (action principale) */
+  --primary-fg:  oklch(0.97 0.005 230);  /* texte sur fond primary           */
+  --destructive: oklch(0.62 0.22 25);    /* rouge erreur / suppression       */
+
+  /* --- Mise en page --- */
+  --radius:      0.75rem;   /* rayon de bordure par défaut */
+  --max-w:       80rem;     /* largeur max du contenu      */
+  --px:          1.5rem;    /* padding horizontal global   */
+}

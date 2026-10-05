@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Équipe — Cléa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    .page-wrap { max-width: 800px; margin: 0 auto; padding: 3rem 1.5rem; }
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; }
+    .page-title { font-size: 1.5rem; font-weight: 700; }
+    .back-link { color: var(--muted-fg); font-size: 0.875rem; display: flex; align-items: center; gap: 0.375rem; }
+    .back-link:hover { color: var(--fg); }
+
+    .users-table { width: 100%; border-collapse: collapse; }
+    .users-table th {
+      text-align: left; font-size: 0.75rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--muted-fg); padding: 0 0.75rem 0.75rem;
+    }
+    .users-table td {
+      padding: 0.875rem 0.75rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+    .role-badge {
+      display: inline-block; padding: 0.2rem 0.6rem;
+      border-radius: 9999px; font-size: 0.75rem; font-weight: 600;
+    }
+    .role-owner  { background: oklch(0.25 0.05 215); color: var(--brand-cyan); }
+    .role-admin  { background: oklch(0.25 0.05 155); color: var(--brand-teal); }
+    .role-member { background: oklch(0.22 0.01 240); color: var(--muted-fg); }
+
+    .invite-section { margin-top: 2.5rem; }
+    .invite-title { font-size: 1rem; font-weight: 600; margin-bottom: 1.25rem; }
+    .invite-form { display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap; }
+    .invite-form .field { flex: 1; min-width: 180px; margin: 0; }
+    .invite-form .field label { font-size: 0.875rem; font-weight: 500; display: block; margin-bottom: 0.375rem; }
+    .invite-form input, .invite-form select {
+      width: 100%;
+      background: oklch(0.14 0.015 240);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.625rem 0.875rem;
+      font-size: 0.875rem;
+      font-family: inherit;
+      color: var(--fg);
+      outline: none;
+    }
+    .invite-form input:focus, .invite-form select:focus { border-color: var(--primary); }
+    .invite-form select option { background: oklch(0.17 0.02 240); }
+
+    .invite-result {
+      margin-top: 1.25rem;
+      background: oklch(0.20 0.04 155 / 40%);
+      border: 1px solid oklch(0.35 0.08 155 / 50%);
+      border-radius: 8px;
+      padding: 1rem;
+      display: none;
+    }
+    .invite-result.visible { display: block; }
+    .invite-result-label { font-size: 0.8rem; color: var(--muted-fg); margin-bottom: 0.5rem; }
+    .invite-link-wrap { display: flex; gap: 0.5rem; align-items: center; }
+    .invite-link {
+      flex: 1; background: oklch(0.14 0.015 240);
+      border: 1px solid var(--border); border-radius: 6px;
+      padding: 0.5rem 0.75rem; font-size: 0.8rem;
+      color: var(--brand-teal); word-break: break-all;
+      font-family: monospace;
+    }
+    .copy-btn { flex-shrink: 0; }
+
+    .error-msg {
+      color: oklch(0.75 0.1 15); font-size: 0.85rem;
+      margin-top: 0.75rem; display: none;
+    }
+    .error-msg.visible { display: block; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="animated-bg" aria-hidden="true">
+      <div class="orb orb--cyan"></div>
+      <div class="orb orb--pink"></div>
+      <div class="orb orb--teal"></div>
+    </div>
+
+    <div class="page-wrap">
+      <div class="page-header">
+        <h1 class="page-title">Équipe</h1>
+        <a href="/" class="back-link">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="m12 5-7 7 7 7"/></svg>
+          Retour
+        </a>
+      </div>
+
+      <div class="card" style="padding: 0; overflow: hidden; border-radius: 12px;">
+        <table class="users-table" id="users-table">
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Rôle</th>
+              <th>Statut</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="users-body">
+            <tr><td colspan="3" style="color:var(--muted-fg); text-align:center; padding:2rem;">Chargement…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="invite-section" id="invite-section" style="display:none">
+        <p class="invite-title">Inviter un membre</p>
+        <div class="invite-form">
+          <div class="field">
+            <label for="invite-username">Nom d'utilisateur</label>
+            <input id="invite-username" type="text" placeholder="prenom.nom" maxlength="50">
+          </div>
+          <div class="field">
+            <label for="invite-email">Email</label>
+            <input id="invite-email" type="email" placeholder="collaborateur@exemple.fr">
+          </div>
+          <div class="field" style="max-width:160px">
+            <label for="invite-role">Rôle</label>
+            <select id="invite-role">
+              <option value="member">Membre</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <button class="btn btn--primary" id="invite-btn" style="margin-bottom:1px">Générer le lien</button>
+        </div>
+        <div class="error-msg" id="invite-error"></div>
+        <div class="invite-result" id="invite-result">
+          <p class="invite-result-label">Lien d'invitation (valable 72h) — à envoyer manuellement :</p>
+          <div class="invite-link-wrap">
+            <span class="invite-link" id="invite-link-text"></span>
+            <button class="btn btn--outline copy-btn" id="copy-btn">Copier</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentUser = null;
+
+    fetch('/api/auth/me')
+      .then(r => { if (!r.ok) window.location.href = '/login'; return r.json(); })
+      .then(user => {
+        currentUser = user;
+        document.getElementById('invite-section').style.display = 'block';
+        loadUsers();
+      })
+      .catch(() => window.location.href = '/login');
+
+    function roleBadge(role) {
+      return `<span class="role-badge role-${role}">${role}</span>`;
+    }
+
+    function canDelete(target) {
+      if (!currentUser) return false;
+      if (target.email === currentUser.email) return false;
+      if (currentUser.role === 'owner') return true;
+      if (currentUser.role === 'admin') return target.role === 'member';
+      return false;
+    }
+
+    function loadUsers() {
+      fetch('/api/users')
+        .then(r => r.json())
+        .then(users => {
+          const tbody = document.getElementById('users-body');
+          if (!users.length) {
+            tbody.innerHTML = '<tr><td colspan="4" style="color:var(--muted-fg);text-align:center;padding:2rem">Aucun membre</td></tr>';
+            return;
+          }
+          tbody.innerHTML = users.map(u => `
+            <tr>
+              <td>${u.email}</td>
+              <td>${roleBadge(u.role)}</td>
+              <td style="color:${u.is_active ? 'var(--brand-teal)' : 'var(--muted-fg)'}">
+                ${u.is_active ? 'Actif' : 'Inactif'}
+              </td>
+              <td style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap">
+                ${canDelete(u) ? `<button class="btn btn--ghost" style="font-size:0.8rem;padding:0.25rem 0.6rem" onclick="logoutUser('${u.id}', '${u.email}')">Déconnecter</button>` : ''}
+                ${canDelete(u) ? `<button class="btn btn--ghost" style="font-size:0.8rem;color:oklch(0.7 0.1 15);padding:0.25rem 0.6rem" onclick="deleteUser('${u.id}', '${u.email}')">Supprimer</button>` : ''}
+              </td>
+            </tr>
+          `).join('');
+        });
+    }
+
+    async function logoutUser(id, email) {
+      if (!confirm(`Déconnecter ${email} de toutes ses sessions ?`)) return;
+      const res = await fetch(`/api/users/${id}/sessions`, { method: 'DELETE' });
+      if (res.ok) {
+        loadUsers();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        alert(d.error || 'Erreur.');
+      }
+    }
+
+    async function deleteUser(id, email) {
+      if (!confirm(`Supprimer ${email} ?`)) return;
+      const res = await fetch(`/api/users/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        loadUsers();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        alert(d.error || 'Erreur.');
+      }
+    }
+
+    document.getElementById('invite-btn').addEventListener('click', async () => {
+      const username = document.getElementById('invite-username').value.trim();
+      const email    = document.getElementById('invite-email').value.trim();
+      const role     = document.getElementById('invite-role').value;
+      const errEl    = document.getElementById('invite-error');
+      errEl.classList.remove('visible');
+      document.getElementById('invite-result').classList.remove('visible');
+
+      if (!username) { errEl.textContent = 'Nom d\'utilisateur requis.'; errEl.classList.add('visible'); return; }
+      if (!email)    { errEl.textContent = 'Email requis.'; errEl.classList.add('visible'); return; }
+
+      const btn = document.getElementById('invite-btn');
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/invitations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email, role }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          errEl.textContent = data.error || 'Erreur.';
+          errEl.classList.add('visible');
+          return;
+        }
+        const link = `${window.location.origin}/invite?token=${data.token}`;
+        document.getElementById('invite-link-text').textContent = link;
+        document.getElementById('invite-result').classList.add('visible');
+        document.getElementById('invite-username').value = '';
+        document.getElementById('invite-email').value = '';
+        loadUsers();
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('copy-btn').addEventListener('click', () => {
+      const text = document.getElementById('invite-link-text').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = 'Copié !';
+        setTimeout(() => btn.textContent = 'Copier', 2000);
+      });
+    });
+  </script>
+</body>
+</html>

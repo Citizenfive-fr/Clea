@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quand le RGPD s'applique — Cléa</title>
+  <meta name="description" content="Comprendre le champ d'application du RGPD : à qui ça s'adresse, ce que couvre le règlement, données personnelles et sensibles." />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/main.css?v=2" />
+  <style>
+    .doc-article {
+      max-width: 760px; margin: 0 auto; padding: 4rem 1.5rem 6rem;
+    }
+    .doc-article__back {
+      display: inline-flex; align-items: center; gap: 0.375rem;
+      font-size: 0.8rem; color: var(--muted-fg); margin-bottom: 2.5rem;
+      transition: color .15s;
+    }
+    .doc-article__back:hover { color: var(--fg); }
+    .doc-article__num {
+      font-size: 0.7rem; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--brand-cyan); margin-bottom: .5rem;
+    }
+    .doc-article__title {
+      font-size: 2rem; font-weight: 700; line-height: 1.2; margin-bottom: 2.5rem;
+    }
+    .doc-block { margin-bottom: 2.5rem; }
+    .doc-block__h2 {
+      font-size: 1.15rem; font-weight: 700; color: var(--brand-cyan);
+      margin-bottom: 1rem; padding-bottom: .5rem;
+      border-bottom: 1px solid oklch(0.35 0.04 215 / 40%);
+    }
+    .doc-block__h3 {
+      font-size: 1rem; font-weight: 600; color: var(--brand-teal);
+      margin: 1.25rem 0 .625rem;
+    }
+    .doc-p { font-size: .925rem; line-height: 1.75; color: var(--fg); margin-bottom: .75rem; }
+    .doc-def {
+      margin: .75rem 0 .75rem 1rem; padding-left: 1rem;
+      border-left: 2px solid oklch(0.40 0.04 215 / 50%);
+    }
+    .doc-def__label {
+      font-size: .8rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--muted-fg); margin-bottom: .25rem;
+    }
+    .doc-def__body { font-size: .9rem; line-height: 1.7; }
+    .doc-callout {
+      margin: 1rem 0; padding: 1rem 1.25rem; border-radius: 10px;
+      background: oklch(0.20 0.04 185 / 35%);
+      border: 1px solid oklch(0.40 0.08 185 / 40%);
+    }
+    .doc-callout__label {
+      font-size: .75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--brand-teal); margin-bottom: .4rem;
+    }
+    .doc-callout__body { font-size: .9rem; line-height: 1.7; }
+    .doc-note {
+      margin: .75rem 0; padding: .75rem 1rem; border-radius: 8px;
+      background: oklch(0.18 0.02 240 / 60%); border: 1px solid var(--border);
+      font-size: .85rem; line-height: 1.6; color: var(--muted-fg); font-style: italic;
+    }
+    .doc-link {
+      color: var(--brand-cyan); text-decoration: underline;
+      text-underline-offset: 3px; transition: color .15s;
+    }
+    .doc-link:hover { color: var(--brand-teal); }
+    .doc-divider { border: none; border-top: 1px solid var(--border); margin: 2.5rem 0; }
+  </style>
+</head>
+<body>
+<a href="#doc-main" class="sr-only sr-only--focusable">Aller au contenu</a>
+
+<div class="page">
+
+  <div class="animated-bg" aria-hidden="true">
+    <div class="orb orb--cyan"></div>
+    <div class="orb orb--pink"></div>
+    <div class="orb orb--teal"></div>
+  </div>
+
+  <!-- Navbar -->
+  <header class="navbar" id="navbar">
+    <nav class="navbar__inner">
+      <a href="/" class="navbar__brand">
+        <span class="navbar__logo" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+            <defs>
+              <linearGradient id="g-nav" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                <stop offset="0%"   stop-color="var(--brand-cyan)" />
+                <stop offset="55%"  stop-color="var(--brand-teal)" />
+                <stop offset="100%" stop-color="var(--brand-pink)" />
+              </linearGradient>
+            </defs>
+            <path d="M16 2a14 14 0 1 0 9.9 23.9l-3.2-3.1A9.6 9.6 0 1 1 22.7 9.2l3.2-3.1A14 14 0 0 0 16 2Z" fill="url(#g-nav)" />
+            <circle cx="16" cy="16" r="4.2" fill="url(#g-nav)" />
+          </svg>
+        </span>
+        <span class="navbar__name-wrap">
+          <span class="navbar__name">Cléa</span>
+          <span class="navbar__tagline"><b>C</b>onformité, <b>L</b>iberté, <b>É</b>quité, <b>A</b>ccessibilité</span>
+        </span>
+      </a>
+
+      <div class="navbar__center">
+        <a href="/" class="btn btn--ghost">Accueil</a>
+        <a href="/documentation" class="btn btn--ghost">Comprendre le RGPD</a>
+        <a href="/actualites" class="btn btn--ghost">Actualités</a>
+        <a href="/app" class="btn btn--primary">
+          Lancer l'app
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </a>
+      </div>
+
+      <div class="navbar__ctas">
+        <a href="/login" class="btn btn--ghost" id="navbar-auth-btn">Se connecter</a>
+        <a href="https://github.com/Citizenfivefr/Clea/" target="_blank" rel="noreferrer" class="btn btn--ghost navbar__github" title="GitHub" aria-label="GitHub">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+        </a>
+      </div>
+
+      <button type="button" id="navbar-toggle" class="navbar__toggle" aria-label="Ouvrir le menu" aria-expanded="false">
+        <svg id="icon-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="4" x2="20" y1="6"  y2="6"/>
+          <line x1="4" x2="20" y1="12" y2="12"/>
+          <line x1="4" x2="20" y1="18" y2="18"/>
+        </svg>
+        <svg id="icon-close" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
+          <path d="M18 6 6 18"/><path d="M6 6l12 12"/>
+        </svg>
+      </button>
+    </nav>
+
+    <div id="navbar-mobile" class="navbar__mobile" hidden>
+      <div class="navbar__mobile-inner">
+        <a href="/" class="navbar__mobile-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/></svg>
+          Accueil
+        </a>
+        <a href="/documentation" class="navbar__mobile-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H2v15h7c1.7 0 3 1.3 3 3V7c0-2.2-1.8-4-4-4Z"/><path d="M16 3h6v15h-7c-1.7 0-3 1.3-3 3V7c0-2.2 1.8-4 4-4Z"/></svg>
+          Comprendre le RGPD
+        </a>
+        <a href="/actualites" class="navbar__mobile-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10l6 6v8a2 2 0 0 1-2 2z"/><path d="M17 20v-8H7v8"/><path d="M7 4v4h8"/></svg>
+          Actualités
+        </a>
+        <div class="navbar__mobile-ctas">
+          <a href="/login" class="btn btn--outline" style="justify-content:center">Se connecter</a>
+          <a href="/app" class="btn btn--primary" style="justify-content:center">
+            Lancer l'app
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="doc-main">
+    <article class="doc-article">
+
+      <a href="/documentation" class="doc-article__back">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="m12 5-7 7 7 7"/></svg>
+        Tous les thèmes
+      </a>
+
+      <p class="doc-article__num">01 — Quand le RGPD s'applique</p>
+      <h1 class="doc-article__title">
+        <span class="text-gradient">Le cadre général</span>
+      </h1>
+
+      <!-- Bloc principal -->
+      <div class="doc-block">
+        <p class="doc-p">Le règlement général sur la protection des données, autrement abrégé <a href="https://eur-lex.europa.eu/legal-content/FR/TXT/?uri=CELEX%3A02016R0679-20160504" target="_blank" rel="noreferrer" class="doc-link"><strong>RGPD</strong></a>, est applicable depuis 2018. Il impose un nombre important de règles à connaître et à respecter mais, avant de rentrer dans les détails, il faut comprendre son champ d'application, autrement dit dans quelle situation ce texte s'applique.</p>
+
+        <div class="doc-def">
+          <p class="doc-def__label">Quoi ?</p>
+          <p class="doc-def__body">Ce texte s'applique dès lors qu'il y a un "traitement de données à caractère personnel, automatisé en tout ou en partie, ainsi qu'au traitement non automatisé de données à caractère personnel contenues ou appelées à figurer dans un fichier".</p>
+        </div>
+
+        <div class="doc-def">
+          <p class="doc-def__label">Où ?</p>
+          <p class="doc-def__body">Dès lors que le responsable de traitement ou le sous-traitant se trouve sur le territoire de l'Union européenne, indépendamment de l'endroit où est fait le traitement, ou dès lors que la personne concernée se trouve sur le territoire de l'Union européenne, indépendamment de l'endroit où est réalisé le traitement, du moment que le traitement est lié à un service ou à un bien proposé à ces personnes, ou si le traitement est lié au suivi du comportement sur ce territoire de la personne concernée.</p>
+
+          <div class="doc-callout" style="margin-top:0.75rem">
+            <p class="doc-callout__label">En clair et pour faire simple</p>
+            <p class="doc-callout__body">Si vous collectez des données personnelles et qu'elles sont traitées de manière automatisée ou si elles sont destinées à être ou sont déjà dans un fichier ; le RGPD s'applique si vous êtes situé dans l'Union européenne, si vos clients s'y trouvent, ou si vous suivez le comportement de personnes qui se trouvent sur ce même territoire, peu importe où vous réalisez le traitement.</p>
+          </div>
+        </div>
+      </div>
+
+      <hr class="doc-divider">
+
+      <!-- Éléments de précision -->
+      <div class="doc-block">
+        <h2 class="doc-block__h2">Des éléments de précision importants</h2>
+
+        <h3 class="doc-block__h3">Le champ d'application du RGPD</h3>
+        <p class="doc-p">Sont exclues du champ d'application du RGPD certaines situations. Notamment ce qu'on appelle couramment "<strong>l'exception domestique</strong>" qui regroupe les activités strictement personnelles ou certains traitements qui relèvent des domaines de compétences exclusives des autorités.</p>
+
+        <h3 class="doc-block__h3">Les données personnelles</h3>
+        <p class="doc-p">Au sens du RGPD, les données personnelles sont des informations "se rapportant à <strong>une personne physique identifiée ou identifiable</strong>". Dès lors, les données se rapportant à des personnes morales comme les entreprises ou autres entités ne sont pas concernées par ce texte. La donnée est personnelle si elle peut identifier directement la personne, mais aussi indirectement. Autrement dit, toute donnée qui peut permettre d'identifier une personne est personnelle. À titre d'exemple, on peut mentionner de manière évidente le nom, le prénom ou la date d'anniversaire, mais aussi l'adresse IP, le numéro de sécurité sociale ou la localisation.</p>
+
+        <h3 class="doc-block__h3">Les données sensibles</h3>
+        <p class="doc-p">Parmi les données personnelles, on retrouve une catégorie de données dites <strong>sensibles</strong> qui regroupe : "l'origine raciale ou ethnique, les opinions politiques, les convictions religieuses ou philosophiques ou l'appartenance syndicale, ainsi que le traitement des données génétiques, des données biométriques aux fins d'identifier une personne physique de manière unique, des données concernant la santé ou des données concernant la vie sexuelle ou l'orientation sexuelle d'une personne physique sont interdits."</p>
+
+        <div class="doc-callout">
+          <p class="doc-callout__label">En clair et pour faire simple</p>
+          <p class="doc-callout__body">Si le RGPD autorise le traitement des données personnelles à condition de le respecter, le traitement des données sensibles est lui interdit par défaut sauf en cas de conditions très encadrées.</p>
+        </div>
+
+        <p class="doc-p">Certaines catégories de données font l'objet d'un encadrement plus strict sans être dans la catégorie des données sensibles, notamment les données liées aux infractions et condamnations.</p>
+
+        <h3 class="doc-block__h3">Les traitements</h3>
+        <p class="doc-p">Un <strong>traitement</strong> correspond à "toute opération ou tout ensemble d'opérations effectuées ou non à l'aide de procédés automatisés et appliquées à des données ou des ensembles de données à caractère personnel". En clair, n'importe quelle manipulation ou action que vous réalisez sur les données est un traitement. C'est notamment le cas pour l'enregistrement ou la collecte.</p>
+
+        <h3 class="doc-block__h3">Les fichiers</h3>
+        <p class="doc-p">Au sens du RGPD, les <strong>fichiers</strong> sont "tout ensemble structuré de données à caractère personnel accessibles selon des critères déterminés". Les tableurs sont donc des fichiers, il en va de même pour les PDF ou même les feuilles papier.</p>
+
+        <h3 class="doc-block__h3">Le RGPD et les autres textes</h3>
+        <p class="doc-p">Bien que le RGPD constitue le centre de la protection juridique en matière de données personnelles, il s'articule aussi avec d'autres textes en droit français, notamment <a href="https://www.legifrance.gouv.fr/loda/id/JORFTEXT000000886460" target="_blank" rel="noreferrer" class="doc-link"><strong>la loi Informatique et Libertés</strong></a> et <a href="https://www.legifrance.gouv.fr/loda/id/JORFTEXT000038528420" target="_blank" rel="noreferrer" class="doc-link"><strong>son décret d'application</strong></a>. D'autres textes poursuivent le même objectif pour d'autres types de données, notamment les données non personnelles ou certaines catégories de données faisant l'objet d'une réglementation sectorielle spécifique.</p>
+
+        <div class="doc-note">
+          Nous ne traiterons avec cet outil <em>que des trois premiers textes mentionnés dans ce paragraphe.</em>
+        </div>
+      </div>
+
+    </article>
+  </main>
+
+  <footer class="footer">
+    <div class="footer__inner">
+      <a href="/" class="footer__brand">
+        <span class="navbar__logo" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+            <defs>
+              <linearGradient id="g-footer" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                <stop offset="0%"   stop-color="var(--brand-cyan)" />
+                <stop offset="55%"  stop-color="var(--brand-teal)" />
+                <stop offset="100%" stop-color="var(--brand-pink)" />
+              </linearGradient>
+            </defs>
+            <path d="M16 2a14 14 0 1 0 9.9 23.9l-3.2-3.1A9.6 9.6 0 1 1 22.7 9.2l3.2-3.1A14 14 0 0 0 16 2Z" fill="url(#g-footer)" />
+            <circle cx="16" cy="16" r="4.2" fill="url(#g-footer)" />
+          </svg>
+        </span>
+        <span class="footer__name">Cléa</span>
+      </a>
+      <p class="footer__tagline"><b>C</b>onformité, <b>L</b>iberté, <b>É</b>quité, <b>A</b>ccessibilité</p>
+      <nav class="footer__nav" aria-label="Liens du pied de page">
+        <a href="https://github.com/Citizenfivefr/Clea/" target="_blank" rel="noreferrer" class="footer__link">GitHub</a>
+        <a href="https://github.com/Citizenfivefr/Clea/blob/main/LICENSE" target="_blank" rel="noreferrer" class="footer__link">AGPL-3.0</a>
+      </nav>
+    </div>
+  </footer>
+
+</div>
+
+<script src="/js/navbar.js"></script>
+</body>
+</html>
