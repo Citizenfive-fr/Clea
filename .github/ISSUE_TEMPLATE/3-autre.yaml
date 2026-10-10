@@ -1,0 +1,12 @@
+name: "Autre"
+description: "Une question, une idée ou autre chose qui ne rentre pas dans les catégories précédentes."
+labels:
+  - "autre"
+body:
+  - type: textarea
+    id: contenu
+    attributes:
+      label: "Ton message"
+      description: "Décris ta question ou ton idée."
+    validations:
+      required: true

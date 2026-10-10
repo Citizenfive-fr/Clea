@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:alpine
+    image: postgres:18-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: clea
@@ -23,8 +23,14 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # Only reachable from the host: put a reverse proxy (HTTPS) in front
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     environment:
       DATABASE_URL: postgres://clea:${POSTGRES_PASSWORD}@db:5432/clea
       APP_SECRET_KEY: ${APP_SECRET_KEY}

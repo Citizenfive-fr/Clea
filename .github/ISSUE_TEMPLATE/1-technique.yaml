@@ -1,0 +1,30 @@
+name: "Problème ou suggestion technique"
+description: "Signale un bug ou propose une amélioration technique."
+labels:
+  - "tech"
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: "Description du problème"
+      description: "Décris clairement le problème ou la suggestion."
+    validations:
+      required: true
+  - type: textarea
+    id: comportement_attendu
+    attributes:
+      label: "Comportement attendu"
+      description: "Que devrait-il se passer à la place ?"
+    validations:
+      required: true
+  - type: textarea
+    id: etapes
+    attributes:
+      label: "Étapes pour reproduire"
+      description: "Liste les étapes permettant de reproduire le problème."
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true

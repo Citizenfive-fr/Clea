@@ -1,0 +1,26 @@
+name: "Erreur ou suggestion juridique"
+description: "Signale une erreur juridique ou propose une correction de contenu."
+labels:
+  - "juridique"
+body:
+  - type: textarea
+    id: texte_concerne
+    attributes:
+      label: "Texte ou article concerné"
+      description: "Quel article, règlement ou texte juridique est en cause ? (ex. : RGPD art. 13, EDPB guidelines 01/2022)"
+    validations:
+      required: true
+  - type: textarea
+    id: probleme
+    attributes:
+      label: "Ce qui est incorrect ou manquant"
+      description: "Explique ce qui est erroné, incomplet ou manquant dans le contenu actuel."
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: "Source"
+      description: "Indique la source sur laquelle tu t'appuies (lien officiel, numéro de décision CNIL, etc.)."
+    validations:
+      required: true
