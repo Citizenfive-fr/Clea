@@ -130,14 +130,14 @@
         <div class="field">
           <label for="password">Mot de passe</label>
           <input id="password" name="password" type="password"
-                 placeholder="12 caractères minimum" autocomplete="new-password" required>
-          <span class="hint">12 caractères minimum.</span>
+                 placeholder="12 caractères minimum" autocomplete="new-password" maxlength="128" required>
+          <span class="hint">Entre 12 et 128 caractères.</span>
         </div>
 
         <div class="field">
           <label for="password_confirm">Confirmer le mot de passe</label>
           <input id="password_confirm" name="password_confirm" type="password"
-                 autocomplete="new-password" required>
+                 autocomplete="new-password" maxlength="128" required>
         </div>
 
         <div class="setup-error" id="setup-error" role="alert"></div>

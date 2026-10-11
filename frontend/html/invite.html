@@ -54,12 +54,12 @@
         <form id="invite-form" novalidate>
           <div class="field">
             <label for="password">Mot de passe</label>
-            <input id="password" type="password" placeholder="12 caractères minimum" autocomplete="new-password" required>
+            <input id="password" type="password" placeholder="12 caractères minimum" autocomplete="new-password" maxlength="128" required>
             <span class="hint">12 caractères minimum.</span>
           </div>
           <div class="field">
             <label for="password_confirm">Confirmer</label>
-            <input id="password_confirm" type="password" autocomplete="new-password" required>
+            <input id="password_confirm" type="password" autocomplete="new-password" maxlength="128" required>
           </div>
           <div class="msg error" id="form-error" role="alert"></div>
           <button type="submit" class="btn invite-btn">Activer mon compte</button>

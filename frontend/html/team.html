@@ -151,6 +151,11 @@
       .then(r => { if (!r.ok) window.location.href = '/login'; return r.json(); })
       .then(user => {
         currentUser = user;
+        // Only the owner can invite admins (enforced server side too)
+        if (user.role !== 'owner') {
+          const adminOption = document.querySelector('#invite-role option[value="admin"]');
+          if (adminOption) adminOption.remove();
+        }
         document.getElementById('invite-section').style.display = 'block';
         loadUsers();
       })
@@ -158,6 +163,10 @@
 
     function roleBadge(role) {
       return `<span class="role-badge role-${role}">${role}</span>`;
+    }
+
+    function escHtml(str) {
+      return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     }
 
     function canDelete(target) {
@@ -179,14 +188,14 @@
           }
           tbody.innerHTML = users.map(u => `
             <tr>
-              <td>${u.email}</td>
+              <td>${escHtml(u.email)}</td>
               <td>${roleBadge(u.role)}</td>
               <td style="color:${u.is_active ? 'var(--brand-teal)' : 'var(--muted-fg)'}">
                 ${u.is_active ? 'Actif' : 'Inactif'}
               </td>
               <td style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap">
-                ${canDelete(u) ? `<button class="btn btn--ghost" style="font-size:0.8rem;padding:0.25rem 0.6rem" onclick="logoutUser('${u.id}', '${u.email}')">Déconnecter</button>` : ''}
-                ${canDelete(u) ? `<button class="btn btn--ghost" style="font-size:0.8rem;color:oklch(0.7 0.1 15);padding:0.25rem 0.6rem" onclick="deleteUser('${u.id}', '${u.email}')">Supprimer</button>` : ''}
+                ${canDelete(u) ? `<button class="btn btn--ghost" style="font-size:0.8rem;padding:0.25rem 0.6rem" data-action="logoutUser" data-id="${escHtml(u.id)}" data-email="${escHtml(u.email)}">Déconnecter</button>` : ''}
+                ${canDelete(u) ? `<button class="btn btn--ghost" style="font-size:0.8rem;color:oklch(0.7 0.1 15);padding:0.25rem 0.6rem" data-action="deleteUser" data-id="${escHtml(u.id)}" data-email="${escHtml(u.email)}">Supprimer</button>` : ''}
               </td>
             </tr>
           `).join('');
@@ -259,6 +268,15 @@
         btn.textContent = 'Copié !';
         setTimeout(() => btn.textContent = 'Copier', 2000);
       });
+    });
+
+    // Inline handlers are blocked by the CSP: one delegated listener instead
+    document.addEventListener('click', (e) => {
+      const el = e.target.closest('[data-action]');
+      if (!el) return;
+      const { action, id, email } = el.dataset;
+      if (action === 'logoutUser') logoutUser(id, email);
+      if (action === 'deleteUser') deleteUser(id, email);
     });
   </script>
 </body>

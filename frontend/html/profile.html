@@ -120,8 +120,8 @@
           </div>
         </div>
         <div id="twofa-actions">
-          <button class="btn btn--outline" id="twofa-enable-btn" style="display:none" onclick="startSetup()">Activer</button>
-          <button class="btn btn--ghost" id="twofa-disable-btn" style="display:none" onclick="showDisableForm()">Désactiver</button>
+          <button class="btn btn--outline" id="twofa-enable-btn" style="display:none" data-action="startSetup">Activer</button>
+          <button class="btn btn--ghost" id="twofa-disable-btn" style="display:none" data-action="showDisableForm">Désactiver</button>
         </div>
       </div>
 
@@ -140,9 +140,9 @@
         <input id="twofa-confirm-code" type="text" inputmode="numeric" pattern="[0-9]{6}"
                placeholder="000000" maxlength="6" autocomplete="one-time-code"
                style="width:100%;box-sizing:border-box;background:oklch(0.14 0.015 240);border:1px solid var(--border);border-radius:8px;padding:0.625rem 0.875rem;font-size:1.1rem;font-family:inherit;color:var(--fg);outline:none;text-align:center;letter-spacing:0.4em;">
-        <button class="btn" style="width:100%;margin-top:0.75rem" onclick="confirmSetup()">Confirmer</button>
+        <button class="btn" style="width:100%;margin-top:0.75rem" data-action="confirmSetup">Confirmer</button>
         <div class="msg error" id="setup-error" role="alert"></div>
-        <button class="btn btn--ghost" style="width:100%;margin-top:0.75rem" onclick="cancelSetup()">Annuler</button>
+        <button class="btn btn--ghost" style="width:100%;margin-top:0.75rem" data-action="cancelSetup">Annuler</button>
       </div>
 
       <!-- Disable confirmation -->
@@ -153,8 +153,8 @@
           <input id="disable-password" type="password" autocomplete="current-password">
         </div>
         <div class="msg error" id="disable-error" role="alert"></div>
-        <button class="btn" style="width:100%;margin-top:0.25rem" onclick="confirmDisable()">Confirmer la désactivation</button>
-        <button class="btn btn--ghost" style="width:100%;margin-top:0.5rem" onclick="cancelDisable()">Annuler</button>
+        <button class="btn" style="width:100%;margin-top:0.25rem" data-action="confirmDisable">Confirmer la désactivation</button>
+        <button class="btn btn--ghost" style="width:100%;margin-top:0.5rem" data-action="cancelDisable">Annuler</button>
       </div>
 
       <div class="msg success" id="twofa-success" role="status"></div>
@@ -180,12 +180,12 @@
         </div>
         <div class="field">
           <label for="new_password">Nouveau mot de passe</label>
-          <input id="new_password" type="password" placeholder="12 caractères minimum" autocomplete="new-password" required>
+          <input id="new_password" type="password" placeholder="12 caractères minimum" autocomplete="new-password" maxlength="128" required>
           <span class="hint">12 caractères minimum.</span>
         </div>
         <div class="field">
           <label for="new_password_confirm">Confirmer</label>
-          <input id="new_password_confirm" type="password" autocomplete="new-password" required>
+          <input id="new_password_confirm" type="password" autocomplete="new-password" maxlength="128" required>
         </div>
         <div class="msg error" id="pw-error" role="alert"></div>
         <div class="msg success" id="pw-success" role="status"></div>
@@ -193,7 +193,7 @@
       </form>
 
       <hr class="section-divider">
-      <button class="btn btn--ghost" style="width:100%;color:oklch(0.7 0.1 15)" onclick="logout()">Se déconnecter</button>
+      <button class="btn btn--ghost" style="width:100%;color:oklch(0.7 0.1 15)" data-action="logout">Se déconnecter</button>
     </div>
   </div>
 
@@ -434,6 +434,14 @@
       } finally {
         btn.disabled = false; btn.textContent = 'Mettre à jour';
       }
+    });
+
+    // Inline handlers are blocked by the CSP: one delegated listener instead
+    const actions = { startSetup, showDisableForm, confirmSetup, cancelSetup, confirmDisable, cancelDisable, logout };
+    document.addEventListener('click', (e) => {
+      const el = e.target.closest('[data-action]');
+      const fn = el && actions[el.dataset.action];
+      if (fn) fn();
     });
   </script>
 </body>

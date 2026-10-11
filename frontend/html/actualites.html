@@ -295,9 +295,11 @@
             body: JSON.stringify({ link: item.link, source: item.source, title: item.title }),
           });
 
-      request.then(r => {
+      request.then(async r => {
         if (!r.ok) {
-          alert(isFav ? "Seul l'auteur ou un admin peut retirer ce favori." : "Impossible d'ajouter ce favori.");
+          // Show the reason given by the server (rights, limit reached, invalid link...)
+          const d = await r.json().catch(() => ({}));
+          alert(d.error || (isFav ? "Impossible de retirer ce favori." : "Impossible d'ajouter ce favori."));
           return;
         }
         if (isFav) {
