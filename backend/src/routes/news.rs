@@ -7,10 +7,11 @@ use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use std::collections::HashMap;
+use std::time::{Duration, Instant};
 
 use crate::{error::AppError, session::AuthSession, state::AppState};
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct NewsItem {
     pub title: String,
     pub link: String,
@@ -36,10 +37,21 @@ pub struct AddFavorite {
     pub title: String,
 }
 
+// Adding a source here is enough: favorites validation, cache and fetching all follow this list
 const FEEDS: &[(&str, &str)] = &[
     ("CNIL", "https://www.cnil.fr/fr/rss.xml"),
     ("EDPB", "https://www.edpb.europa.eu/feed/news_en"),
 ];
+
+/// A feed is refreshed at most once per TTL, whatever the number of users
+const CACHE_TTL: Duration = Duration::from_secs(600);
+/// Maximum size of a feed answer
+const MAX_FEED_BYTES: usize = 2 * 1024 * 1024;
+/// Items kept per feed in the cache (the answer is cut to 10 or 25 afterwards)
+const FETCH_LIMIT: usize = 25;
+const MAX_LINK_LEN: usize = 2048;
+const MAX_TITLE_CHARS: usize = 500;
+const MAX_FAVORITES_PER_ORG: i64 = 500;
 
 const LABEL_RULES: &[(&str, &[&str])] = &[
     (
@@ -79,29 +91,63 @@ fn assign_labels(title: &str) -> Vec<String> {
 
 pub async fn feeds(
     _session: AuthSession,
+    State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Json<Vec<NewsItem>>, AppError> {
     let source_filter = params.get("source").map(|s| s.as_str());
     let limit = if source_filter.is_some() { 25 } else { 10 };
 
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(10))
-        .user_agent("Clea/0.1 RGPD compliance tool")
-        .build()
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+    let selected: Vec<(&str, &str)> = FEEDS
+        .iter()
+        .filter(|(source, _)| source_filter.is_none_or(|f| f == *source))
+        .copied()
+        .collect();
 
-    let mut items: Vec<NewsItem> = Vec::new();
+    // Sources whose cache is missing or too old are fetched in parallel
+    let to_refresh: Vec<(&str, &str)> = {
+        let cache = state.news_cache.lock().unwrap_or_else(|p| p.into_inner());
+        selected
+            .iter()
+            .filter(|(source, _)| {
+                cache
+                    .get(*source)
+                    .is_none_or(|(fetched_at, _)| fetched_at.elapsed() >= CACHE_TTL)
+            })
+            .copied()
+            .collect()
+    };
 
-    for (source, url) in FEEDS {
-        if let Some(filter) = source_filter {
-            if *source != filter {
-                continue;
+    let handles: Vec<_> = to_refresh
+        .into_iter()
+        .map(|(source, url)| {
+            let client = state.http.clone();
+            tokio::spawn(async move { (source, fetch_feed(&client, source, url).await) })
+        })
+        .collect();
+
+    for handle in handles {
+        match handle.await {
+            Ok((source, Ok(items))) => {
+                state
+                    .news_cache
+                    .lock()
+                    .unwrap_or_else(|p| p.into_inner())
+                    .insert(source.to_string(), (Instant::now(), items));
             }
-        }
-        if let Ok(mut feed_items) = fetch_feed(&client, source, url, limit).await {
-            items.append(&mut feed_items);
+            Ok((source, Err(()))) => tracing::warn!("Flux {} indisponible", source),
+            Err(e) => tracing::warn!("Récupération de flux interrompue : {}", e),
         }
     }
+
+    // A feed that failed to refresh still serves its previous (stale) items, if any
+    let mut items: Vec<NewsItem> = {
+        let cache = state.news_cache.lock().unwrap_or_else(|p| p.into_inner());
+        selected
+            .iter()
+            .filter_map(|(source, _)| cache.get(*source))
+            .flat_map(|(_, feed_items)| feed_items.iter().take(limit).cloned())
+            .collect()
+    };
 
     items.sort_by(|a, b| {
         let parse = |s: &Option<String>| {
@@ -128,8 +174,7 @@ pub async fn list_favorites(
     )
     .bind(session.org_id)
     .fetch_all(&state.db)
-    .await
-    .map_err(|e| AppError::Internal(e.to_string()))?;
+    .await?;
 
     Ok(Json(
         rows.iter()
@@ -154,6 +199,34 @@ pub async fn add_favorite(
     State(state): State<AppState>,
     Json(body): Json<AddFavorite>,
 ) -> Result<StatusCode, AppError> {
+    let link = body.link.trim();
+    let valid_link = link.len() <= MAX_LINK_LEN
+        && reqwest::Url::parse(link).is_ok_and(|u| u.scheme() == "https" && u.host_str().is_some());
+    if !valid_link {
+        return Err(AppError::BadRequest("Lien invalide (https requis)".into()));
+    }
+    let title = body.title.trim();
+    if title.is_empty()
+        || title.chars().count() > MAX_TITLE_CHARS
+        || title.chars().any(char::is_control)
+    {
+        return Err(AppError::BadRequest("Titre invalide".into()));
+    }
+    if !FEEDS.iter().any(|(source, _)| *source == body.source) {
+        return Err(AppError::BadRequest("Source inconnue".into()));
+    }
+
+    let count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM news_favorites WHERE organization_id = $1")
+            .bind(session.org_id)
+            .fetch_one(&state.db)
+            .await?;
+    if count >= MAX_FAVORITES_PER_ORG {
+        return Err(AppError::Conflict(format!(
+            "Limite de {MAX_FAVORITES_PER_ORG} favoris atteinte"
+        )));
+    }
+
     sqlx::query(
         "INSERT INTO news_favorites (organization_id, added_by, link, source, title)
          VALUES ($1, $2, $3, $4, $5)
@@ -161,12 +234,11 @@ pub async fn add_favorite(
     )
     .bind(session.org_id)
     .bind(session.user_id)
-    .bind(&body.link)
+    .bind(link)
     .bind(&body.source)
-    .bind(&body.title)
+    .bind(title)
     .execute(&state.db)
-    .await
-    .map_err(|e| AppError::Internal(e.to_string()))?;
+    .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -185,13 +257,12 @@ pub async fn remove_favorite(
             .bind(session.org_id)
             .bind(link)
             .fetch_optional(&state.db)
-            .await
-            .map_err(|e| AppError::Internal(e.to_string()))?
+            .await?
             .ok_or_else(|| AppError::NotFound("Favori introuvable".into()))?;
 
     let added_by: uuid::Uuid = row.get("added_by");
     if added_by != session.user_id && session.role == "member" {
-        return Err(AppError::Unauthorized(
+        return Err(AppError::Forbidden(
             "Seul l'auteur ou un admin peut retirer ce favori".into(),
         ));
     }
@@ -200,8 +271,7 @@ pub async fn remove_favorite(
         .bind(session.org_id)
         .bind(link)
         .execute(&state.db)
-        .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -210,23 +280,29 @@ async fn fetch_feed(
     client: &reqwest::Client,
     source: &str,
     url: &str,
-    limit: usize,
 ) -> Result<Vec<NewsItem>, ()> {
-    let bytes = client
+    let mut response = client
         .get(url)
         .send()
         .await
-        .map_err(|_| ())?
-        .bytes()
-        .await
+        .and_then(|r| r.error_for_status())
         .map_err(|_| ())?;
+
+    // Read by chunks so an oversized answer is dropped instead of filling the memory
+    let mut bytes: Vec<u8> = Vec::new();
+    while let Some(chunk) = response.chunk().await.map_err(|_| ())? {
+        if bytes.len() + chunk.len() > MAX_FEED_BYTES {
+            return Err(());
+        }
+        bytes.extend_from_slice(&chunk);
+    }
 
     let channel = rss::Channel::read_from(&bytes[..]).map_err(|_| ())?;
 
     Ok(channel
         .items()
         .iter()
-        .take(limit)
+        .take(FETCH_LIMIT)
         .map(|item| {
             let title = item.title().unwrap_or("Sans titre").to_string();
             let labels = assign_labels(&title);

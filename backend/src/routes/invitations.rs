@@ -1,13 +1,8 @@
-use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
-    Algorithm, Argon2, Params, Version,
-};
 use axum::{
     extract::{Query, State},
     http::StatusCode,
     Json,
 };
-use rand::{rng, Rng};
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use time::OffsetDateTime;
@@ -16,8 +11,10 @@ use uuid::Uuid;
 use crate::{
     audit,
     error::AppError,
-    session::{hash_token, AuthSession},
+    password,
+    session::{hash_token, random_token, AuthSession},
     state::AppState,
+    validation,
 };
 
 #[derive(Deserialize)]
@@ -35,8 +32,7 @@ pub async fn check(
     )
     .bind(&token_hash)
     .fetch_one(&state.db)
-    .await
-    .map_err(|e| AppError::Internal(e.to_string()))?;
+    .await?;
 
     if valid {
         Ok(StatusCode::NO_CONTENT)
@@ -65,25 +61,25 @@ pub async fn create(
     Json(payload): Json<InvitePayload>,
 ) -> Result<Json<InviteResponse>, AppError> {
     if session.role == "member" {
-        return Err(AppError::Unauthorized("Accès refusé".into()));
+        return Err(AppError::Forbidden("Accès refusé".into()));
     }
     if !["admin", "member"].contains(&payload.role.as_str()) {
         return Err(AppError::BadRequest("Rôle invalide".into()));
     }
-    if !payload.email.contains('@') {
-        return Err(AppError::BadRequest("Email invalide".into()));
+    // Least privilege: only the owner can create admins
+    if payload.role == "admin" && session.role != "owner" {
+        return Err(AppError::Forbidden(
+            "Seul le propriétaire peut inviter un admin".into(),
+        ));
     }
-    let username = payload.username.trim().to_string();
-    if username.is_empty() || username.len() > 50 {
-        return Err(AppError::BadRequest("Nom d'utilisateur invalide".into()));
-    }
+    let email = validation::email(&payload.email)?;
+    let username = validation::username(&payload.username)?;
     // Check username not already taken
     let username_taken: bool =
         sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)")
             .bind(&username)
             .fetch_one(&state.db)
-            .await
-            .map_err(|e| AppError::Internal(e.to_string()))?;
+            .await?;
     if username_taken {
         return Err(AppError::Conflict(
             "Ce nom d'utilisateur est déjà pris".into(),
@@ -92,17 +88,14 @@ pub async fn create(
 
     // Check user doesn't already exist
     let exists = sqlx::query("SELECT 1 FROM users WHERE email = $1")
-        .bind(payload.email.trim().to_lowercase().as_str())
+        .bind(&email)
         .fetch_optional(&state.db)
-        .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .await?;
     if exists.is_some() {
         return Err(AppError::Conflict("Cet email est déjà utilisé".into()));
     }
 
-    let mut bytes = [0u8; 32];
-    rng().fill_bytes(&mut bytes);
-    let token: String = bytes.iter().map(|b| format!("{:02x}", b)).collect();
+    let token = random_token();
     let token_hash = hash_token(&token);
 
     let expires_at =
@@ -115,14 +108,13 @@ pub async fn create(
     .bind(Uuid::new_v4())
     .bind(session.org_id)
     .bind(session.user_id)
-    .bind(payload.email.trim().to_lowercase())
+    .bind(&email)
     .bind(&payload.role)
     .bind(&token_hash)
     .bind(expires_at)
     .bind(&username)
     .execute(&state.db)
-    .await
-    .map_err(|e| AppError::Internal(e.to_string()))?;
+    .await?;
 
     audit::log(
         &state.db,
@@ -147,11 +139,7 @@ pub async fn accept(
     State(state): State<AppState>,
     Json(payload): Json<AcceptPayload>,
 ) -> Result<StatusCode, AppError> {
-    if payload.password.len() < 12 {
-        return Err(AppError::BadRequest(
-            "Mot de passe trop court (12 caractères minimum)".into(),
-        ));
-    }
+    validation::password(&payload.password)?;
 
     let token_hash = hash_token(&payload.token);
 
@@ -163,8 +151,7 @@ pub async fn accept(
     )
     .bind(&token_hash)
     .fetch_optional(&state.db)
-    .await
-    .map_err(|e| AppError::Internal(e.to_string()))?
+    .await?
     .ok_or_else(|| AppError::BadRequest("Invitation invalide ou expirée".into()))?;
 
     let inv_id: Uuid = row.get("id");
@@ -173,19 +160,9 @@ pub async fn accept(
     let role: String = row.get("role");
     let username: Option<String> = row.get("username");
 
-    let salt = SaltString::generate(&mut OsRng);
-    let params = Params::new(19456, 2, 1, None).map_err(|e| AppError::Internal(e.to_string()))?;
-    let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
-    let password_hash = argon2
-        .hash_password(payload.password.as_bytes(), &salt)
-        .map_err(|e| AppError::Internal(e.to_string()))?
-        .to_string();
+    let password_hash = password::hash(&state, payload.password.clone()).await?;
 
-    let mut tx = state
-        .db
-        .begin()
-        .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+    let mut tx = state.db.begin().await?;
 
     sqlx::query(
         "INSERT INTO users (id, organization_id, email, password_hash, role, is_active, username)
@@ -198,18 +175,14 @@ pub async fn accept(
     .bind(&role)
     .bind(username.as_deref())
     .execute(&mut *tx)
-    .await
-    .map_err(|e| AppError::Internal(e.to_string()))?;
+    .await?;
 
     sqlx::query("UPDATE invitations SET accepted_at = now() WHERE id = $1")
         .bind(inv_id)
         .execute(&mut *tx)
-        .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .await?;
 
-    tx.commit()
-        .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+    tx.commit().await?;
 
     audit::log(
         &state.db,

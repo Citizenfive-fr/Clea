@@ -1,7 +1,12 @@
 use axum::{
     extract::{FromRef, FromRequestParts},
-    http::{header::COOKIE, request::Parts},
+    http::{
+        header::{COOKIE, SET_COOKIE},
+        request::Parts,
+        HeaderMap, HeaderValue,
+    },
 };
+use rand::{rng, Rng};
 use sha2::{Digest, Sha256};
 use sqlx::Row;
 use uuid::Uuid;
@@ -41,8 +46,7 @@ where
         )
         .bind(&token_hash)
         .fetch_optional(&state.db)
-        .await
-        .map_err(|e| AppError::Internal(e.to_string()))?
+        .await?
         .ok_or_else(|| AppError::Unauthorized("Session invalide ou expirée".into()))?;
 
         Ok(AuthSession {
@@ -53,6 +57,26 @@ where
             username: row.get("username"),
         })
     }
+}
+
+/// Set-Cookie header for the session cookie (`max_age_secs = 0` with an empty token clears it).
+pub fn cookie_headers(secure_cookies: bool, token: &str, max_age_secs: i64) -> HeaderMap {
+    let secure = if secure_cookies { "; Secure" } else { "" };
+    let cookie = format!(
+        "session={token}; Path=/; HttpOnly; SameSite=Strict; Max-Age={max_age_secs}{secure}"
+    );
+    let mut headers = HeaderMap::new();
+    if let Ok(value) = HeaderValue::from_str(&cookie) {
+        headers.insert(SET_COOKIE, value);
+    }
+    headers
+}
+
+/// 256 random bits as hex: session, invitation and pending 2FA tokens, CSP nonces.
+pub fn random_token() -> String {
+    let mut bytes = [0u8; 32];
+    rng().fill_bytes(&mut bytes);
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
 pub fn hash_token(token: &str) -> String {

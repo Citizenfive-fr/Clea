@@ -9,7 +9,7 @@ pub async fn log(
     resource_type: Option<&str>,
     resource_id: Option<Uuid>,
 ) {
-    let _ = sqlx::query(
+    if let Err(e) = sqlx::query(
         "INSERT INTO audit_logs (id, organization_id, user_id, action, resource_type, resource_id)
          VALUES ($1, $2, $3, $4, $5, $6)",
     )
@@ -20,6 +20,9 @@ pub async fn log(
     .bind(resource_type)
     .bind(resource_id)
     .execute(db)
-    .await;
-    // Silently ignored — audit failures must never block the main flow
+    .await
+    {
+        // Never block the main flow, but do not fail silently either
+        tracing::warn!("Écriture du journal d'audit échouée : {}", e);
+    }
 }

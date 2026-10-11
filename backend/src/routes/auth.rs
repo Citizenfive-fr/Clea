@@ -1,38 +1,29 @@
-use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
-    Algorithm, Argon2, Params, PasswordHash, PasswordVerifier, Version,
-};
 use axum::{
-    extract::State,
-    http::{header::SET_COOKIE, HeaderMap, StatusCode},
-    response::{Html, IntoResponse, Response},
+    extract::{ConnectInfo, State},
+    http::{HeaderMap, StatusCode},
+    response::{IntoResponse, Response},
     Json,
 };
-use rand::{rng, Rng};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::Row;
-use std::time::{Duration, Instant};
+use std::net::SocketAddr;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
 use crate::{
     audit,
     error::AppError,
+    password,
+    ratelimit::{ban_error, client_key},
     routes::totp::create_pending_token,
-    session::{extract_session_token, hash_token, AuthSession},
+    session::{cookie_headers, extract_session_token, hash_token, random_token, AuthSession},
     state::AppState,
+    validation,
 };
 
-const RATE_LIMIT_MAX: u8 = 5;
-const RATE_LIMIT_WINDOW: Duration = Duration::from_secs(900); // 15 min
-
-pub async fn login_page() -> Html<String> {
-    Html(
-        tokio::fs::read_to_string("../frontend/html/login.html")
-            .await
-            .unwrap_or_default(),
-    )
+pub async fn login_page() -> Response {
+    crate::routes::app::html_page("login.html", false).await
 }
 
 #[derive(Deserialize)]
@@ -50,22 +41,20 @@ pub struct LoginResponse {
 
 pub async fn login(
     State(state): State<AppState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     Json(payload): Json<LoginPayload>,
 ) -> Result<Response, AppError> {
     let email = payload.email.trim().to_lowercase();
+    let ip_key = client_key(&headers, peer, state.config.trust_proxy);
 
-    // Check rate limit before any DB work
-    {
-        let mut attempts = state.login_attempts.lock().unwrap();
-        if let Some((count, since)) = attempts.get(&email) {
-            if since.elapsed() >= RATE_LIMIT_WINDOW {
-                attempts.remove(&email);
-            } else if *count >= RATE_LIMIT_MAX {
-                return Err(AppError::TooManyRequests(
-                    "Trop de tentatives. Réessayez dans 15 minutes.".into(),
-                ));
-            }
-        }
+    // Check rate limits before any DB work
+    let banned = state
+        .login_ip_limiter
+        .check(&ip_key)
+        .and(state.login_email_limiter.check(&email));
+    if let Err(remaining) = banned {
+        return Err(ban_error(remaining));
     }
 
     let row = sqlx::query(
@@ -74,15 +63,14 @@ pub async fn login(
     )
     .bind(&email)
     .fetch_optional(&state.db)
-    .await
-    .map_err(|e| AppError::Internal(e.to_string()))?;
+    .await?;
 
     let (found, user_id, org_id, db_hash, role, is_active, totp_enabled) = match row {
         Some(r) => (
             true,
             r.get::<Uuid, _>("id"),
             r.get::<Uuid, _>("organization_id"),
-            r.get::<String, _>("password_hash"),
+            Some(r.get::<String, _>("password_hash")),
             r.get::<String, _>("role"),
             r.get::<bool, _>("is_active"),
             r.get::<bool, _>("totp_enabled"),
@@ -91,32 +79,27 @@ pub async fn login(
             false,
             Uuid::nil(),
             Uuid::nil(),
-            String::new(),
+            None,
             String::new(),
             false,
             false,
         ),
     };
 
-    // Constant-time: always verify even if user not found (prevents timing attacks)
-    let password_ok = !db_hash.is_empty() && verify_password(&payload.password, &db_hash);
+    // Unknown user: verified against a dummy hash, so timing does not reveal accounts
+    let password_ok = password::verify(&state, payload.password.clone(), db_hash).await?;
 
     if !found || !is_active || !password_ok {
-        // Increment failed attempt counter
-        let mut attempts = state.login_attempts.lock().unwrap();
-        let entry = attempts.entry(email.clone()).or_insert((0, Instant::now()));
-        if entry.1.elapsed() >= RATE_LIMIT_WINDOW {
-            *entry = (1, Instant::now());
-        } else {
-            entry.0 = entry.0.saturating_add(1);
-        }
+        state.login_ip_limiter.record_failure(&ip_key);
+        state.login_email_limiter.record_failure(&email);
         return Err(AppError::Unauthorized(
             "Email ou mot de passe incorrect".into(),
         ));
     }
 
-    // Clear attempt counter on success
-    state.login_attempts.lock().unwrap().remove(&email);
+    // Clear the email counter on success. The IP counter is kept on purpose:
+    // otherwise an attacker owning one valid account could reset it at will.
+    state.login_email_limiter.clear_failures(&email);
 
     // If 2FA is enabled: return a short-lived pending token instead of a session
     if totp_enabled {
@@ -128,7 +111,7 @@ pub async fn login(
             .into_response());
     }
 
-    create_session(&state, user_id, org_id, role).await
+    create_session(&state, user_id, org_id, role, "auth.login").await
 }
 
 pub async fn logout(State(state): State<AppState>, req_headers: HeaderMap) -> impl IntoResponse {
@@ -168,17 +151,7 @@ pub async fn logout(State(state): State<AppState>, req_headers: HeaderMap) -> im
         }
     }
 
-    let secure = if state.config.secure_cookies {
-        "; Secure"
-    } else {
-        ""
-    };
-    let clear = format!(
-        "session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0{}",
-        secure
-    );
-    let mut headers = HeaderMap::new();
-    headers.insert(SET_COOKIE, clear.parse().unwrap());
+    let headers = cookie_headers(state.config.secure_cookies, "", 0);
     (StatusCode::NO_CONTENT, headers)
 }
 
@@ -189,8 +162,7 @@ pub async fn me(
     let row = sqlx::query("SELECT totp_enabled FROM users WHERE id = $1")
         .bind(session.user_id)
         .fetch_one(&state.db)
-        .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .await?;
 
     let totp_enabled: bool = row.get("totp_enabled");
 
@@ -213,57 +185,41 @@ pub async fn change_password(
     State(state): State<AppState>,
     Json(payload): Json<PasswordChangePayload>,
 ) -> Result<StatusCode, AppError> {
-    if payload.new_password.len() < 12 {
-        return Err(AppError::BadRequest(
-            "Mot de passe trop court (12 caractères minimum)".into(),
-        ));
-    }
+    validation::password(&payload.new_password)?;
+    let limit_key = session.user_id.to_string();
+    state.reauth_limiter.check(&limit_key).map_err(ban_error)?;
 
     let row = sqlx::query("SELECT password_hash FROM users WHERE id = $1")
         .bind(session.user_id)
         .fetch_one(&state.db)
-        .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .await?;
 
     let current_hash: String = row.get("password_hash");
 
-    if !verify_password(&payload.current_password, &current_hash) {
+    if !password::verify(&state, payload.current_password.clone(), Some(current_hash)).await? {
+        state.reauth_limiter.record_failure(&limit_key);
         return Err(AppError::Unauthorized(
             "Mot de passe actuel incorrect".into(),
         ));
     }
 
-    let salt = SaltString::generate(&mut OsRng);
-    let params = Params::new(19456, 2, 1, None).map_err(|e| AppError::Internal(e.to_string()))?;
-    let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
-    let new_hash = argon2
-        .hash_password(payload.new_password.as_bytes(), &salt)
-        .map_err(|e| AppError::Internal(e.to_string()))?
-        .to_string();
+    let new_hash = password::hash(&state, payload.new_password.clone()).await?;
 
-    let mut tx = state
-        .db
-        .begin()
-        .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+    let mut tx = state.db.begin().await?;
 
     sqlx::query("UPDATE users SET password_hash = $1, updated_at = now() WHERE id = $2")
         .bind(&new_hash)
         .bind(session.user_id)
         .execute(&mut *tx)
-        .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .await?;
 
     // Invalidate all sessions (forces re-login on all devices)
     sqlx::query("DELETE FROM sessions WHERE user_id = $1")
         .bind(session.user_id)
         .execute(&mut *tx)
-        .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .await?;
 
-    tx.commit()
-        .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+    tx.commit().await?;
 
     audit::log(
         &state.db,
@@ -284,10 +240,9 @@ pub async fn create_session(
     user_id: Uuid,
     org_id: Uuid,
     role: String,
+    audit_action: &str,
 ) -> Result<Response, AppError> {
-    let mut bytes = [0u8; 32];
-    rng().fill_bytes(&mut bytes);
-    let token: String = bytes.iter().map(|b| format!("{:02x}", b)).collect();
+    let token = random_token();
     let token_hash = hash_token(&token);
 
     let expires_at =
@@ -301,31 +256,23 @@ pub async fn create_session(
     .bind(&token_hash)
     .bind(expires_at)
     .execute(&state.db)
-    .await
-    .map_err(|e| AppError::Internal(e.to_string()))?;
+    .await?;
 
     audit::log(
         &state.db,
         Some(org_id),
         Some(user_id),
-        "auth.login",
+        audit_action,
         None,
         None,
     )
     .await;
 
-    let max_age = state.config.session_duration_hours * 3600;
-    let secure = if state.config.secure_cookies {
-        "; Secure"
-    } else {
-        ""
-    };
-    let cookie = format!(
-        "session={}; Path=/; HttpOnly; SameSite=Strict; Max-Age={}{}",
-        token, max_age, secure
+    let headers = cookie_headers(
+        state.config.secure_cookies,
+        &token,
+        state.config.session_duration_hours * 3600,
     );
-    let mut headers = HeaderMap::new();
-    headers.insert(SET_COOKIE, cookie.parse().unwrap());
 
     Ok((
         StatusCode::OK,
@@ -349,20 +296,14 @@ pub async fn update_username(
     State(state): State<AppState>,
     Json(payload): Json<UsernamePayload>,
 ) -> Result<StatusCode, AppError> {
-    let username = payload.username.trim().to_string();
-    if username.is_empty() || username.len() > 50 {
-        return Err(AppError::BadRequest(
-            "Le nom d'utilisateur doit contenir entre 1 et 50 caractères".into(),
-        ));
-    }
+    let username = validation::username(&payload.username)?;
 
     let exists: bool =
         sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE username = $1 AND id != $2)")
             .bind(&username)
             .bind(session.user_id)
             .fetch_one(&state.db)
-            .await
-            .map_err(|e| AppError::Internal(e.to_string()))?;
+            .await?;
 
     if exists {
         return Err(AppError::Conflict(
@@ -374,19 +315,7 @@ pub async fn update_username(
         .bind(&username)
         .bind(session.user_id)
         .execute(&state.db)
-        .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .await?;
 
     Ok(StatusCode::NO_CONTENT)
-}
-
-fn verify_password(password: &str, hash: &str) -> bool {
-    PasswordHash::new(hash)
-        .ok()
-        .map(|parsed| {
-            Argon2::default()
-                .verify_password(password.as_bytes(), &parsed)
-                .is_ok()
-        })
-        .unwrap_or(false)
 }

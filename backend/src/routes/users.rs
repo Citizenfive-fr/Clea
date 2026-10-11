@@ -22,7 +22,7 @@ pub async fn list(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<UserEntry>>, AppError> {
     if session.role == "member" {
-        return Err(AppError::Unauthorized("Accès refusé".into()));
+        return Err(AppError::Forbidden("Accès refusé".into()));
     }
 
     let rows = sqlx::query(
@@ -31,8 +31,7 @@ pub async fn list(
     )
     .bind(session.org_id)
     .fetch_all(&state.db)
-    .await
-    .map_err(|e| AppError::Internal(e.to_string()))?;
+    .await?;
 
     Ok(Json(
         rows.iter()
@@ -52,7 +51,7 @@ pub async fn delete(
     Path(user_id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     if session.role == "member" {
-        return Err(AppError::Unauthorized("Accès refusé".into()));
+        return Err(AppError::Forbidden("Accès refusé".into()));
     }
     if session.user_id == user_id {
         return Err(AppError::BadRequest(
@@ -64,15 +63,14 @@ pub async fn delete(
         .bind(user_id)
         .bind(session.org_id)
         .fetch_optional(&state.db)
-        .await
-        .map_err(|e| AppError::Internal(e.to_string()))?
+        .await?
         .ok_or_else(|| AppError::NotFound("Utilisateur introuvable".into()))?;
 
     let target_role: String = row.get("role");
 
     // Admin can only delete members
     if session.role == "admin" && target_role != "member" {
-        return Err(AppError::Unauthorized(
+        return Err(AppError::Forbidden(
             "Un admin ne peut supprimer que des membres".into(),
         ));
     }
@@ -81,8 +79,7 @@ pub async fn delete(
         .bind(user_id)
         .bind(session.org_id)
         .execute(&state.db)
-        .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .await?;
 
     audit::log(
         &state.db,
@@ -112,8 +109,7 @@ pub async fn logout_sessions(
         .bind(user_id)
         .bind(session.org_id)
         .fetch_optional(&state.db)
-        .await
-        .map_err(|e| AppError::Internal(e.to_string()))?
+        .await?
         .ok_or_else(|| AppError::NotFound("Utilisateur introuvable".into()))?;
 
     let target_role: String = row.get("role");
@@ -121,14 +117,13 @@ pub async fn logout_sessions(
     match session.role.as_str() {
         "owner" => {}
         "admin" if target_role == "member" => {}
-        _ => return Err(AppError::Unauthorized("Accès refusé".into())),
+        _ => return Err(AppError::Forbidden("Accès refusé".into())),
     }
 
     sqlx::query("DELETE FROM sessions WHERE user_id = $1")
         .bind(user_id)
         .execute(&state.db)
-        .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .await?;
 
     audit::log(
         &state.db,
