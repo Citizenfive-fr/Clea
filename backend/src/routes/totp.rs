@@ -5,7 +5,7 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use rand::{rng, RngCore};
+use rand::{rng, Rng};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use sqlx::Row;

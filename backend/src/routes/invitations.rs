@@ -7,7 +7,7 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use rand::{rng, RngCore};
+use rand::{rng, Rng};
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use time::OffsetDateTime;

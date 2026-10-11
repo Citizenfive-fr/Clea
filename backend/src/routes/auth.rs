@@ -8,7 +8,7 @@ use axum::{
     response::{Html, IntoResponse, Response},
     Json,
 };
-use rand::{rng, RngCore};
+use rand::{rng, Rng};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::Row;
