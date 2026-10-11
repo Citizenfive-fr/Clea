@@ -5,7 +5,7 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use rand::{thread_rng, RngCore};
+use rand::{rng, RngCore};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use sqlx::Row;
@@ -27,7 +27,7 @@ pub async fn setup(
     State(state): State<AppState>,
 ) -> Result<Json<Value>, AppError> {
     let mut raw = [0u8; 20];
-    thread_rng().fill_bytes(&mut raw);
+    rng().fill_bytes(&mut raw);
 
     let secret_b32 = match totp_rs::Secret::Raw(raw.to_vec()).to_encoded() {
         totp_rs::Secret::Encoded(s) => s,
@@ -203,7 +203,7 @@ pub async fn verify(
     state.pending_2fa.lock().unwrap().remove(&token_hash);
 
     let mut bytes = [0u8; 32];
-    thread_rng().fill_bytes(&mut bytes);
+    rng().fill_bytes(&mut bytes);
     let session_token: String = bytes.iter().map(|b| format!("{:02x}", b)).collect();
     let session_token_hash = hash_token(&session_token);
 
@@ -255,7 +255,7 @@ pub async fn verify(
 /// Stores a pending 2FA token in memory. Returns the plaintext token to send to the client.
 pub fn create_pending_token(state: &AppState, user_id: Uuid) -> String {
     let mut raw = [0u8; 32];
-    thread_rng().fill_bytes(&mut raw);
+    rng().fill_bytes(&mut raw);
     let token: String = raw.iter().map(|b| format!("{:02x}", b)).collect();
     let token_hash = hash_token(&token);
     state

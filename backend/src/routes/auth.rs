@@ -8,7 +8,7 @@ use axum::{
     response::{Html, IntoResponse, Response},
     Json,
 };
-use rand::{thread_rng, RngCore};
+use rand::{rng, RngCore};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::Row;
@@ -286,7 +286,7 @@ pub async fn create_session(
     role: String,
 ) -> Result<Response, AppError> {
     let mut bytes = [0u8; 32];
-    thread_rng().fill_bytes(&mut bytes);
+    rng().fill_bytes(&mut bytes);
     let token: String = bytes.iter().map(|b| format!("{:02x}", b)).collect();
     let token_hash = hash_token(&token);
 

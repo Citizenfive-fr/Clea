@@ -7,7 +7,7 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use rand::{thread_rng, RngCore};
+use rand::{rng, RngCore};
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use time::OffsetDateTime;
@@ -101,7 +101,7 @@ pub async fn create(
     }
 
     let mut bytes = [0u8; 32];
-    thread_rng().fill_bytes(&mut bytes);
+    rng().fill_bytes(&mut bytes);
     let token: String = bytes.iter().map(|b| format!("{:02x}", b)).collect();
     let token_hash = hash_token(&token);
 
