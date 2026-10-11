@@ -35,6 +35,9 @@ services:
       DATABASE_URL: postgres://clea:${POSTGRES_PASSWORD}@db:5432/clea
       APP_SECRET_KEY: ${APP_SECRET_KEY}
       SECURE_COOKIES: "true"
+      # Real client IP for login rate limiting, read from X-Forwarded-For.
+      # Only valid because the port is bound to 127.0.0.1 behind a reverse proxy.
+      TRUST_PROXY: "true"
       SESSION_DURATION_HOURS: "24"
       INVITATION_DURATION_HOURS: "72"
 

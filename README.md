@@ -58,8 +58,10 @@ La méthode recommandée est Docker. L'image est publiée sur le registre GitHub
 
 ```env
 POSTGRES_PASSWORD=un_mot_de_passe_solide
-APP_SECRET_KEY=une_clé_aléatoire_longue
+APP_SECRET_KEY=colle_ici_le_resultat_de_la_commande_ci_dessous
 ```
+
+Génère la clé avec `openssl rand -hex 64` (32 caractères minimum, sinon Cléa ne démarre pas). Elle chiffre les secrets 2FA en base. Garde-en une copie **séparée** des sauvegardes de la base (gestionnaire de mots de passe par exemple). Si elle est perdue ou modifiée, les secrets 2FA deviennent illisibles et chaque 2FA doit être réinitialisé.
 
 **2. Créer un fichier `docker-compose.yml`**
 
@@ -87,11 +89,12 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     environment:
       DATABASE_URL: postgres://clea:${POSTGRES_PASSWORD}@db:5432/clea
       APP_SECRET_KEY: ${APP_SECRET_KEY}
       SECURE_COOKIES: "true"
+      TRUST_PROXY: "true"
       SESSION_DURATION_HOURS: "24"
       INVITATION_DURATION_HOURS: "72"
 
