@@ -5,7 +5,7 @@ on:
     types: [published]
 
 env:
-  IMAGE: ghcr.io/citizenfivefr/clea
+  IMAGE: ghcr.io/citizenfive-fr/clea
 
 jobs:
   publish:

@@ -52,7 +52,7 @@ Une fois les bases posées, Cléa accompagne les entreprises dans leur mise en c
 
 ## Installation
 
-La méthode recommandée est Docker. L'image est publiée sur le registre GitHub (`ghcr.io/citizenfivefr/clea`).
+La méthode recommandée est Docker. L'image est publiée sur le registre GitHub (`ghcr.io/citizenfive-fr/clea`).
 
 **1. Créer un fichier `.env`**
 
@@ -83,7 +83,7 @@ services:
       retries: 5
 
   app:
-    image: ghcr.io/citizenfivefr/clea:latest
+    image: ghcr.io/citizenfive-fr/clea:latest
     restart: unless-stopped
     depends_on:
       db:
