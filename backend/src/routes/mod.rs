@@ -3,6 +3,7 @@ pub mod auth;
 pub mod health;
 pub mod invitations;
 pub mod news;
+pub mod recovery_key;
 pub mod setup;
 pub mod totp;
 pub mod users;
@@ -27,6 +28,13 @@ pub fn api_router() -> Router<AppState> {
         .route("/auth/2fa/confirm", post(totp::confirm))
         .route("/auth/2fa/disable", post(totp::disable))
         .route("/auth/2fa/verify", post(totp::verify))
+        .route("/recovery-key", get(recovery_key::status))
+        .route("/recovery-key/verify", post(recovery_key::verify))
+        .route("/recovery-key/replace", post(recovery_key::replace))
+        .route(
+            "/recovery-key/notice/dismiss",
+            post(recovery_key::dismiss_notice),
+        )
         .route("/users", get(users::list))
         .route("/users/{id}", axum::routing::delete(users::delete))
         .route(

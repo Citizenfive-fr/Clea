@@ -31,3 +31,6 @@ chrono = "0.4"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 aes-gcm = "0.10"
+hkdf = "0.12"
+zeroize = "1"
+hpke = { version = "0.14", default-features = false, features = ["x25519", "alloc", "aes", "getrandom"] }

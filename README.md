@@ -61,7 +61,7 @@ POSTGRES_PASSWORD=un_mot_de_passe_solide
 APP_SECRET_KEY=colle_ici_le_resultat_de_la_commande_ci_dessous
 ```
 
-Génère la clé avec `openssl rand -hex 64` (32 caractères minimum, sinon Cléa ne démarre pas). Elle chiffre les secrets 2FA en base. Garde-en une copie **séparée** des sauvegardes de la base (gestionnaire de mots de passe par exemple). Si elle est perdue ou modifiée, les secrets 2FA deviennent illisibles et chaque 2FA doit être réinitialisé.
+Génère la clé avec `openssl rand -hex 64` (64 caractères hexadécimaux minimum, sinon Cléa ne démarre pas). C'est la **clé maîtresse** : elle protège les données chiffrées en base. Garde-en une copie **séparée** des sauvegardes de la base, imprimée et rangée dans un endroit sûr. Tu peux aussi la mettre dans un fichier et donner son chemin avec `APP_KEY_FILE` (prioritaire sur `APP_SECRET_KEY`), par exemple avec les secrets Docker.
 
 **2. Créer un fichier `docker-compose.yml`**
 
@@ -118,6 +118,54 @@ Il est fortement conseillé de placer Cléa derrière un reverse proxy avec HTTP
 - **Nginx** : plus classique, configuration manuelle du certificat TLS
 
 L'option `SECURE_COOKIES: "true"` est déjà activée dans la configuration ci-dessus et requiert HTTPS en production.
+
+**Clé maîtresse et clé de secours**
+
+Ce qu'on peut lire dans une copie de la base sans la clé maîtresse :
+
+| Donnée | Dans la base |
+|---|---|
+| Secret 2FA | chiffré |
+| Mots de passe, jetons de session | hachés (impossible de retrouver l'original) |
+| E-mails, noms d'utilisateur, nom de l'organisation, favoris, journal d'audit | en clair (chiffrement des e-mails prévu plus tard) |
+
+Tout ce que tu saisiras dans les modules de l'app (registre des traitements, AIPD, demandes de droits, etc.) sera chiffré dès leur création.
+
+Au setup, Cléa affiche une **clé de secours** (`CLEA-RECOVERY-KEY-...`), une seule fois. Range-la à part de la clé maîtresse, imprimée et rangée dans un endroit sûr. Elle sert seulement si la clé maîtresse est perdue. Si les deux sont perdues, les données chiffrées ne peuvent plus être récupérées.
+
+Les commandes ci-dessous lisent les clés sur l'entrée standard (`-`) : elles ne passent jamais en argument, et aucun fichier n'est copié dans le conteneur.
+
+*Changer de clé maîtresse*
+
+```bash
+docker compose stop app
+openssl rand -hex 64 > nouvelle.key && chmod 600 nouvelle.key
+docker compose run --rm -T app rotate-key - < nouvelle.key
+# Remplace APP_SECRET_KEY dans le .env par le contenu de nouvelle.key, puis :
+shred -u nouvelle.key
+docker compose up -d
+```
+
+*Clé maîtresse perdue*
+
+```bash
+# 1. Mets une nouvelle clé (openssl rand -hex 64) dans APP_SECRET_KEY du .env
+# 2. Copie la clé de secours dans un fichier secours.txt (chmod 600), puis :
+docker compose stop app
+docker compose run --rm -T app recover - < secours.txt
+shred -u secours.txt
+docker compose up -d
+```
+
+`recover` affiche une **nouvelle clé de secours** et l'ancienne ne marche plus. Range la nouvelle tout de suite. Une sauvegarde de la base faite avant le `recover` s'ouvre toujours avec l'ancienne clé de secours.
+
+*Clé de secours perdue*
+
+```bash
+docker compose run --rm -T app new-recovery-key
+```
+
+La commande utilise la clé maîtresse du `.env` et affiche une nouvelle clé de secours. L'ancienne ne marche plus. Pas besoin d'arrêter Cléa. Ce n'est pas possible depuis l'interface, exprès : un mot de passe volé ne doit pas suffire pour se créer une clé de secours.
 
 ---
 

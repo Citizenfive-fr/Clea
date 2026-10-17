@@ -4,7 +4,6 @@ use axum::{
     response::Response,
     Json,
 };
-use rand::{rng, Rng};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use sqlx::Row;
@@ -13,9 +12,9 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
 use crate::{
-    audit, crypto,
+    audit,
     error::AppError,
-    password,
+    keys, password,
     ratelimit::{ban_error, client_key},
     routes::auth::create_session,
     session::{hash_token, random_token, AuthSession},
@@ -28,8 +27,9 @@ pub async fn setup(
     session: AuthSession,
     State(state): State<AppState>,
 ) -> Result<Json<Value>, AppError> {
+    // Long-term secret: taken from the OS random source
     let mut raw = [0u8; 20];
-    rng().fill_bytes(&mut raw);
+    keys::fill_random(&mut raw);
 
     let secret_b32 = match totp_rs::Secret::Raw(raw.to_vec()).to_encoded() {
         totp_rs::Secret::Encoded(s) => s,
@@ -52,11 +52,10 @@ pub async fn setup(
         .get_qr_base64()
         .map_err(|e| AppError::Internal(e.to_string()))?;
 
-    let stored_secret = crypto::encrypt(
-        &state.config.app_secret_key,
-        session.user_id.as_bytes(),
-        &secret_b32,
-    )?;
+    // Encrypted with the organization key, bound to the user
+    let stored_secret = keys::org_key(&state, session.org_id)
+        .await?
+        .encrypt(session.user_id.as_bytes(), &secret_b32)?;
 
     // Never replace the secret of an account whose 2FA is already active:
     // the user must disable it first (which requires the password).
@@ -97,11 +96,9 @@ pub async fn confirm(
 
     let secret_b32: Option<String> = row.try_get("totp_secret").ok().flatten();
     let secret_b32 = secret_b32.ok_or_else(|| AppError::BadRequest("2FA non initialisé".into()))?;
-    let secret_b32 = crypto::decrypt(
-        &state.config.app_secret_key,
-        session.user_id.as_bytes(),
-        &secret_b32,
-    )?;
+    let secret_b32 = keys::org_key(&state, session.org_id)
+        .await?
+        .decrypt(session.user_id.as_bytes(), &secret_b32)?;
 
     let step = matching_step(&secret_b32, &session.email, &payload.code)?
         .ok_or_else(|| AppError::Unauthorized("Code incorrect".into()))?;
@@ -230,11 +227,9 @@ pub async fn verify(
     let role: String = row.get("role");
     let secret_b32: Option<String> = row.try_get("totp_secret").ok().flatten();
     let secret_b32 = secret_b32.ok_or_else(|| AppError::Internal("2FA secret manquant".into()))?;
-    let secret_b32 = crypto::decrypt(
-        &state.config.app_secret_key,
-        user_id.as_bytes(),
-        &secret_b32,
-    )?;
+    let secret_b32 = keys::org_key(&state, org_id)
+        .await?
+        .decrypt(user_id.as_bytes(), &secret_b32)?;
 
     // Per-user ban: applies across logins and pending tokens, and grows on repeat
     let user_key = user_id.to_string();

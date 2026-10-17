@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use uuid::Uuid;
 
-use crate::{error::AppError, password, state::AppState, validation};
+use crate::{error::AppError, keys, password, recovery, state::AppState, validation};
 
 pub async fn page() -> Response {
     crate::routes::app::html_page("setup.html", false).await
@@ -35,7 +35,7 @@ pub struct SetupPayload {
 pub async fn complete(
     State(state): State<AppState>,
     Json(payload): Json<SetupPayload>,
-) -> Result<StatusCode, AppError> {
+) -> Result<(StatusCode, Json<serde_json::Value>), AppError> {
     let row = sqlx::query("SELECT completed FROM setup_state WHERE id = 1")
         .fetch_one(&state.db)
         .await?;
@@ -61,12 +61,29 @@ pub async fn complete(
 
     let mut tx = state.db.begin().await?;
 
-    sqlx::query("INSERT INTO organizations (id, name, slug) VALUES ($1, $2, $3)")
-        .bind(org_id)
-        .bind(payload.org_name.trim())
-        .bind(slug)
-        .execute(&mut *tx)
-        .await?;
+    // Each organization gets its own data key, stored locked by the master key
+    let org_key = keys::OrgKey::generate();
+    let locked_key = keys::lock_org_key(&state.config.master_key, org_id, &org_key)?;
+    // Recovery key pair: the organization key is also locked for its public part,
+    // the secret part is returned once to the owner and never stored
+    let recovery_key = recovery::generate();
+    let recovery_locked_key =
+        recovery::lock_for_recovery(&recovery_key.public_key, org_id, &org_key)?;
+
+    sqlx::query(
+        "INSERT INTO organizations
+            (id, name, slug, locked_key, recovery_locked_key, recovery_public_key,
+             recovery_created_at, recovery_source)
+         VALUES ($1, $2, $3, $4, $5, $6, now(), 'setup')",
+    )
+    .bind(org_id)
+    .bind(payload.org_name.trim())
+    .bind(slug)
+    .bind(&locked_key)
+    .bind(&recovery_locked_key)
+    .bind(&recovery_key.public_key)
+    .execute(&mut *tx)
+    .await?;
 
     sqlx::query(
         "INSERT INTO users (id, organization_id, email, password_hash, role, is_active, username)
@@ -94,7 +111,10 @@ pub async fn complete(
 
     tx.commit().await?;
 
-    Ok(StatusCode::CREATED)
+    Ok((
+        StatusCode::CREATED,
+        Json(serde_json::json!({ "recovery_key": recovery_key.secret_display.as_str() })),
+    ))
 }
 
 fn slugify(name: &str) -> String {

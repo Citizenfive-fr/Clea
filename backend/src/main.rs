@@ -1,9 +1,11 @@
 mod audit;
+mod cli;
 mod config;
-mod crypto;
 mod error;
+mod keys;
 mod password;
 mod ratelimit;
+mod recovery;
 mod router;
 mod routes;
 mod session;
@@ -23,6 +25,16 @@ async fn main() {
         )
         .init();
     dotenvy::dotenv().ok();
+
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let command = cli::parse(&args).unwrap_or_else(|usage| {
+        eprintln!("{usage}");
+        std::process::exit(2);
+    });
+    if let cli::Command::Help = command {
+        println!("{}", cli::USAGE);
+        return;
+    }
 
     let config = config::Config::from_env().unwrap_or_else(|e| {
         tracing::error!("{}", e);
@@ -46,13 +58,76 @@ async fn main() {
             std::process::exit(1);
         });
 
-    match crypto::encrypt_legacy_totp_secrets(&db, &config.app_secret_key).await {
-        Ok(0) => {}
-        Ok(n) => tracing::info!("Secrets 2FA chiffrés : {}", n),
-        Err(_) => {
-            tracing::error!("Chiffrement des secrets 2FA existants échoué");
-            std::process::exit(1);
+    match command {
+        cli::Command::Recover(file) => {
+            match cli::recover(&db, &config.master_key, &file).await {
+                Ok(recovered) => {
+                    for org in &recovered {
+                        println!(
+                            "Organisation « {} » : clé récupérée et enfermée avec la nouvelle \
+                             clé maîtresse.",
+                            org.name
+                        );
+                        print_new_recovery_key(&org.new_recovery_key);
+                    }
+                    let shred = if file == "-" {
+                        "shred -u <fichier>".to_string()
+                    } else {
+                        format!("shred -u {file}")
+                    };
+                    println!(
+                        "Supprime maintenant le fichier de l'ancienne clé de secours \
+                         ({shred}), puis relance Cléa."
+                    );
+                }
+                Err(e) => {
+                    eprintln!("{e}");
+                    std::process::exit(1);
+                }
+            }
+            if let Err(e) = keys::check_org_keys(&db, &config.master_key).await {
+                eprintln!(
+                    "Attention, une autre organisation ne s'ouvre pas avec cette clé maîtresse : {e}\n\
+                     Son propriétaire doit lancer clea recover avec sa propre clé de secours."
+                );
+            }
+            return;
         }
+        cli::Command::RotateKey(file) => {
+            match cli::rotate_key(&db, &config.master_key, &file).await {
+                Ok(count) => println!(
+                    "Clé maîtresse changée pour {count} organisation(s).\n\
+                     L'ancienne clé ne marche plus : mets la nouvelle dans APP_SECRET_KEY \
+                     ou APP_KEY_FILE, puis relance Cléa."
+                ),
+                Err(e) => {
+                    eprintln!("{e}");
+                    std::process::exit(1);
+                }
+            }
+            return;
+        }
+        cli::Command::NewRecoveryKey => {
+            match cli::new_recovery_key(&db, &config.master_key).await {
+                Ok(renewed) => {
+                    for org in &renewed {
+                        println!("Organisation « {} » :", org.name);
+                        print_new_recovery_key(&org.new_recovery_key);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("{e}");
+                    std::process::exit(1);
+                }
+            }
+            return;
+        }
+        cli::Command::Serve | cli::Command::Help => {}
+    }
+
+    if let Err(e) = keys::check_org_keys(&db, &config.master_key).await {
+        tracing::error!("{}", e);
+        std::process::exit(1);
     }
 
     tracing::info!("Base de données prête");
@@ -113,4 +188,13 @@ async fn main() {
     )
     .await
     .unwrap();
+}
+
+/// Shows a new recovery key once, with what to do with it.
+fn print_new_recovery_key(key: &str) {
+    println!(
+        "\nL'ancienne clé de secours ne marche plus. Voici la nouvelle, affichée une seule \
+         fois. Garde-la hors de ce serveur, imprimée et rangée dans un \
+         endroit sûr. Ne la transmets à personne :\n\n{key}\n"
+    );
 }

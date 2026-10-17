@@ -89,6 +89,58 @@
       display: none;
     }
     .setup-error.visible { display: block; }
+
+    /* Recovery key, shown once after the setup */
+    .field-label { display: block; font-size: 0.875rem; font-weight: 500; color: var(--fg); }
+    .recovery-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      outline: none;
+    }
+    .recovery-text {
+      font-size: 0.9rem;
+      line-height: 1.55;
+      margin-bottom: 0.75rem;
+    }
+    .recovery-key {
+      width: 100%;
+      resize: none;
+      background: oklch(0.14 0.015 240);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem;
+      font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: var(--fg);
+      word-break: break-all;
+      margin: 0.375rem 0 0.75rem;
+    }
+    .recovery-key:focus { border-color: var(--primary); outline: 2px solid var(--primary); outline-offset: 2px; }
+    .copy-status { font-size: 0.85rem; min-height: 1.3em; margin: 0.5rem 0 1rem; color: var(--muted-fg); }
+    .recovery-check {
+      display: flex;
+      gap: 0.625rem;
+      align-items: flex-start;
+      font-size: 0.9rem;
+      line-height: 1.45;
+      cursor: pointer;
+    }
+    .recovery-check input { width: 1.15rem; height: 1.15rem; margin-top: 0.1rem; flex-shrink: 0; }
+    .keys-explainer {
+      font-size: 0.85rem; line-height: 1.6;
+      background: oklch(0.16 0.015 240); border: 1px solid var(--border);
+      border-radius: 10px; padding: 1rem 1.125rem; margin: 0.5rem 0 1.25rem;
+    }
+    .keys-explainer p { margin: 0 0 0.625rem; }
+    .keys-explainer p:last-child { margin-bottom: 0; }
+    .keys-explainer__title { font-size: 0.95rem; font-weight: 600; cursor: pointer; padding: 0.125rem 0; }
+    .keys-explainer[open] .keys-explainer__title { margin-bottom: 0.625rem; }
+    .keys-explainer__title:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 4px; }
+    .keys-explainer a { color: var(--brand-teal); text-decoration: underline; text-underline-offset: 2px; }
+    .keys-explainer a:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 2px; }
+    .setup-btn:disabled { opacity: 0.55; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -102,7 +154,7 @@
   <div class="setup-wrap">
     <div class="card setup-card">
       <div class="setup-logo">Cléa</div>
-      <p class="setup-subtitle">Configuration initiale — créez votre espace de travail.</p>
+      <p class="setup-subtitle">Configuration initiale : crée ton espace de travail.</p>
 
       <form id="setup-form" novalidate>
         <p class="setup-section">Entreprise</p>
@@ -144,6 +196,41 @@
 
         <button type="submit" class="btn setup-btn">Créer l'espace de travail</button>
       </form>
+
+      <section id="recovery-step" hidden aria-labelledby="recovery-title">
+        <h1 id="recovery-title" class="recovery-title" tabindex="-1">Ta clé de secours</h1>
+        <p class="recovery-text">
+          Elle sert à récupérer les données chiffrées de ton entreprise si la clé maîtresse
+          du serveur est perdue. <strong>Elle ne sera plus jamais affichée.</strong>
+        </p>
+        <p class="recovery-text" id="recovery-help">
+          Garde-la hors de ce serveur : imprimée et rangée dans un endroit sûr.
+          Ne la transmets à personne.
+        </p>
+        <details class="keys-explainer" open>
+          <summary class="keys-explainer__title">Comment marchent les clés de Cléa ?</summary>
+          <p>Cléa utilise un système tri-clés pour chiffrer tes données. Chaque clé a un nom qui lui est propre et un rôle unique.</p>
+          <p><strong>La clé de l'organisation</strong> permet de chiffrer tes données sensibles qui sont stockées dans Cléa. Cette clé est directement enfermée et chiffrée par la clé maîtresse et celle de secours dans la base, personne ne peut la voir. Elle peut être ouverte avec la clé maîtresse ou celle de secours. Pour savoir en détail quelles sont les données qui sont chiffrées, tu peux consulter <a href="https://github.com/Citizenfive-fr/Clea/wiki/Chiffrement" target="_blank" rel="noopener noreferrer">la page du wiki sur le chiffrement (s'ouvre dans un nouvel onglet)</a>.</p>
+          <p><strong>La clé maîtresse</strong> est essentielle pour le bon fonctionnement quotidien de Cléa car elle permet d'ouvrir la clé de l'organisation et donc de déchiffrer le contenu chiffré. Cette clé doit être gardée par la personne qui gère et maintient le serveur où Cléa est hébergée. Cléa doit pouvoir accéder à cette clé au moment où il est nécessaire de déchiffrer le contenu. Il est conseillé de faire une copie de cette clé en dehors du serveur.</p>
+          <p><strong>La clé de secours</strong> fait office de double de secours pour ouvrir la clé de l'organisation si tu as perdu la clé maîtresse. Il est fortement conseillé que tu gardes cette clé toi-même et que tu ne l'utilises qu'en cas de besoin dans Cléa.</p>
+          <p>Dans le cas où la clé maîtresse et la clé de secours sont perdues, il ne sera plus possible de déchiffrer le contenu sensible.</p>
+        </details>
+
+        <label for="recovery-key" class="field-label">Clé de secours</label>
+        <textarea id="recovery-key" class="recovery-key" rows="4" readonly
+                  spellcheck="false" autocomplete="off" aria-describedby="recovery-help"></textarea>
+
+        <button type="button" id="copy-btn" class="btn btn--outline">Copier la clé</button>
+        <p id="copy-status" class="copy-status" role="status" aria-live="polite"></p>
+
+        <label class="recovery-check">
+          <input type="checkbox" id="saved-check" aria-describedby="continue-hint">
+          <span>J'ai sauvegardé cette clé dans un endroit sûr</span>
+        </label>
+        <p id="continue-hint" class="hint" style="margin-top:0.5rem">Coche la case pour continuer.</p>
+
+        <button type="button" id="continue-btn" class="btn setup-btn" disabled>Continuer</button>
+      </section>
     </div>
   </div>
   </div><!-- /.page -->
@@ -191,7 +278,12 @@
         });
 
         if (res.status === 201) {
-          window.location.href = '/';
+          const data = await res.json().catch(() => ({}));
+          if (data.recovery_key) {
+            showRecoveryKey(data.recovery_key);
+          } else {
+            window.location.href = '/';
+          }
           return;
         }
 
@@ -203,6 +295,54 @@
         btn.disabled = false;
         btn.textContent = "Créer l'espace de travail";
       }
+    });
+
+    // Recovery key: shown once, the owner must confirm it is saved before leaving
+    const recoveryStep = document.getElementById('recovery-step');
+    const recoveryKey  = document.getElementById('recovery-key');
+    const copyBtn      = document.getElementById('copy-btn');
+    const copyStatus   = document.getElementById('copy-status');
+    const savedCheck   = document.getElementById('saved-check');
+    const continueBtn  = document.getElementById('continue-btn');
+    let keySaved = false;
+
+    function warnBeforeLeaving(e) {
+      if (!keySaved) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    }
+
+    function showRecoveryKey(key) {
+      form.hidden = true;
+      document.querySelector('.setup-subtitle').hidden = true;
+      recoveryKey.value = key;
+      recoveryStep.hidden = false;
+      document.getElementById('recovery-title').focus();
+      window.addEventListener('beforeunload', warnBeforeLeaving);
+    }
+
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(recoveryKey.value);
+        copyStatus.textContent = 'Clé copiée.';
+      } catch {
+        recoveryKey.focus();
+        recoveryKey.select();
+        copyStatus.textContent = 'Copie automatique impossible : la clé est sélectionnée, copie-la avec Ctrl+C.';
+      }
+    });
+
+    savedCheck.addEventListener('change', () => {
+      continueBtn.disabled = !savedCheck.checked;
+    });
+
+    continueBtn.addEventListener('click', () => {
+      if (!savedCheck.checked) return;
+      keySaved = true;
+      window.removeEventListener('beforeunload', warnBeforeLeaving);
+      recoveryKey.value = '';
+      window.location.href = '/';
     });
   </script>
 </body>

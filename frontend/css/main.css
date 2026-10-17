@@ -751,3 +751,27 @@ svg  { display: block; flex-shrink: 0; }
 @media (prefers-reduced-motion: reduce) {
   .doc-cat-card, .concept-card { transition: none; }
 }
+
+/* Owner notice (recovery key recreated by the server admin), see js/recovery-notice.js.
+   Same look as the dashboard cards (glass + glow-border). Stays until closed: no timer. */
+.notice-toast {
+  position: fixed; top: 5rem; right: 1rem; z-index: 1000;
+  max-width: 24rem; width: calc(100% - 2rem); box-sizing: border-box;
+  display: grid; grid-template-columns: 1fr auto; gap: 0.5rem 0.75rem;
+  padding: 1.25rem; border-radius: 0.75rem;
+  color: var(--fg); font-size: 0.875rem; line-height: 1.5;
+  box-shadow: 0 8px 32px oklch(0 0 0 / 35%);
+}
+.notice-toast.glass { background: color-mix(in oklch, var(--card) 92%, transparent); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+.notice-toast__label { grid-column: 1; display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: var(--muted-fg); margin: 0; }
+.notice-toast__label svg { color: var(--brand-pink); flex-shrink: 0; }
+.notice-toast__text { margin: 0; grid-column: 1 / span 2; }
+.notice-toast__link { grid-column: 1 / span 2; justify-self: start; color: var(--brand-teal); text-decoration: underline; text-underline-offset: 2px; font-weight: 500; }
+.notice-toast__close {
+  grid-column: 2; grid-row: 1; align-self: start;
+  min-width: 2rem; min-height: 2rem; border-radius: 0.5rem;
+  background: transparent; border: 1px solid color-mix(in oklch, var(--fg) 10%, transparent); color: var(--muted-fg);
+  font-size: 1.25rem; line-height: 1; cursor: pointer;
+}
+.notice-toast__close:hover { color: var(--fg); background: color-mix(in oklch, var(--fg) 6%, transparent); }
+.notice-toast__link:focus-visible, .notice-toast__close:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }

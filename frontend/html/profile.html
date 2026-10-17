@@ -66,6 +66,55 @@
       color: var(--brand-teal); word-break: break-all; text-align: center;
     }
     .secret-hint { font-size: 0.75rem; color: var(--muted-fg); text-align: center; }
+
+    /* Recovery key section (owner only) */
+    [hidden] { display: none !important; }
+    .recovery-text { font-size: 0.85rem; line-height: 1.55; color: var(--muted-fg); margin-bottom: 1rem; }
+    .recovery-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.25rem; }
+    .panel-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.75rem; outline: none; }
+    .field-label { display: block; font-size: 0.875rem; font-weight: 500; }
+    .recovery-key {
+      width: 100%; box-sizing: border-box; resize: none;
+      background: oklch(0.14 0.015 240); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.75rem;
+      font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+      font-size: 0.9rem; line-height: 1.6; color: var(--fg); word-break: break-all;
+      margin: 0.375rem 0 0.75rem;
+    }
+    .recovery-key:focus { border-color: var(--primary); outline: 2px solid var(--primary); outline-offset: 2px; }
+    .copy-status { font-size: 0.85rem; min-height: 1.3em; margin: 0.5rem 0 1rem; color: var(--muted-fg); }
+    .recovery-check { display: flex; gap: 0.625rem; align-items: flex-start; font-size: 0.9rem; line-height: 1.45; cursor: pointer; }
+    .recovery-check input { width: 1.15rem; height: 1.15rem; margin-top: 0.1rem; flex-shrink: 0; }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .keys-explainer {
+      font-size: 0.85rem; line-height: 1.6;
+      background: oklch(0.16 0.015 240); border: 1px solid var(--border);
+      border-radius: 10px; padding: 1rem 1.125rem; margin: 0.5rem 0 1.25rem;
+    }
+    .keys-explainer p { margin: 0 0 0.625rem; }
+    .keys-explainer p:last-child { margin-bottom: 0; }
+    .keys-explainer__title { font-size: 0.95rem; font-weight: 600; cursor: pointer; padding: 0.125rem 0; }
+    .keys-explainer[open] .keys-explainer__title { margin-bottom: 0.625rem; }
+    .keys-explainer__title:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 4px; }
+    .keys-explainer a { color: var(--brand-teal); text-decoration: underline; text-underline-offset: 2px; }
+    .keys-explainer a:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 2px; }
+    .host-hint { position: relative; margin: 0 0 1.25rem; padding-right: 3rem; }
+    .host-hint p { margin: 0; }
+    .host-hint__close {
+      position: absolute; top: 0.5rem; right: 0.5rem;
+      min-width: 2rem; min-height: 2rem; border-radius: 6px; cursor: pointer;
+      background: transparent; color: inherit; font-size: 1.2rem; line-height: 1;
+      border: 1px solid oklch(0.45 0.12 15/60%);
+    }
+    .host-hint__close:hover { background: oklch(0.30 0.07 15/60%); }
+    .host-hint__close:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+    .help-details { font-size: 0.85rem; line-height: 1.55; margin-bottom: 0.5rem; }
+    .help-details summary { cursor: pointer; font-weight: 500; padding: 0.25rem 0; }
+    .help-details summary:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 4px; }
+    .help-details dl { margin: 0.75rem 0 0; }
+    .help-details dt { font-weight: 600; margin-top: 0.75rem; }
+    .help-details dd { margin: 0.25rem 0 0; color: var(--muted-fg); }
+    .help-details code { font-size: 0.8rem; }
   </style>
 </head>
 <body>
@@ -161,6 +210,121 @@
 
       <hr class="section-divider">
 
+      <!-- Recovery key (owner only) -->
+      <section id="recovery-section" hidden aria-labelledby="recovery-title">
+        <h2 class="section-title" id="recovery-title">Clé de secours</h2>
+
+        <p class="recovery-text">
+          Elle permet de récupérer les données chiffrées de l'entreprise si la clé maîtresse
+          du serveur est perdue. Cléa ne la garde pas : seule ta copie existe.
+        </p>
+
+        <div class="twofa-status">
+          <div>
+            <div class="info-label" style="margin-bottom:0.25rem">Statut</div>
+            <div class="status-badge on">
+              <span class="status-dot on" aria-hidden="true"></span>
+              <span>En place, <span id="recovery-date">…</span></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="msg error host-hint" id="recovery-host-hint" role="note">
+          <p>
+            Ta clé de secours a été recréée par la personne qui gère ou maintient le serveur.
+            Ton ancienne clé ne marche plus : demande-lui la nouvelle si elle ne te l'a pas encore donnée.
+            Si tu n'étais pas au courant, contacte-la. Une fois que tu l'as, tu peux la remplacer avec
+            le bouton «&nbsp;Remplacer ma clé&nbsp;», pour être la seule personne à la connaître.
+          </p>
+          <button type="button" class="host-hint__close" data-action="dismissNotice"
+                  aria-label="Fermer cet avertissement">×</button>
+        </div>
+
+        <div class="recovery-actions">
+          <button type="button" class="btn btn--outline" data-action="showVerifyForm">Vérifier ma clé</button>
+          <button type="button" class="btn btn--ghost" data-action="showReplaceForm">Remplacer ma clé</button>
+        </div>
+
+        <!-- Check the key (changes nothing) -->
+        <div class="twofa-setup-panel" id="verify-panel" hidden>
+          <h3 class="panel-title">Vérifier ma clé de secours</h3>
+          <p class="recovery-text">Colle ta clé pour vérifier que c'est bien la bonne. Rien n'est modifié.</p>
+          <label for="verify-key" class="field-label">Clé de secours</label>
+          <textarea id="verify-key" class="recovery-key" rows="3" spellcheck="false"
+                    autocomplete="off" autocapitalize="off" placeholder="CLEA-RECOVERY-KEY-…"></textarea>
+          <div class="msg error" id="verify-error" role="alert"></div>
+          <div class="msg success" id="verify-success" role="status"></div>
+          <button type="button" class="btn" style="width:100%;margin-top:0.75rem" data-action="confirmVerify">Vérifier</button>
+          <button type="button" class="btn btn--ghost" style="width:100%;margin-top:0.5rem" data-action="cancelVerify">Fermer</button>
+        </div>
+
+        <!-- Replace the key: needs the current key and the password -->
+        <div class="twofa-setup-panel" id="replace-panel" hidden>
+          <h3 class="panel-title">Remplacer ma clé de secours</h3>
+          <p class="recovery-text">
+            Une nouvelle clé sera créée et l'actuelle ne marchera plus. Il faut ta clé actuelle
+            et ton mot de passe. Si tu as perdu ta clé, vois « Que faire si… » plus bas.
+          </p>
+          <label for="replace-key" class="field-label">Clé de secours actuelle</label>
+          <textarea id="replace-key" class="recovery-key" rows="3" spellcheck="false"
+                    autocomplete="off" autocapitalize="off" placeholder="CLEA-RECOVERY-KEY-…"></textarea>
+          <div class="field">
+            <label for="replace-password">Mot de passe</label>
+            <input id="replace-password" type="password" autocomplete="current-password">
+          </div>
+          <div class="msg error" id="replace-error" role="alert"></div>
+          <button type="button" class="btn" style="width:100%;margin-top:0.75rem" data-action="confirmReplace">Remplacer</button>
+          <button type="button" class="btn btn--ghost" style="width:100%;margin-top:0.5rem" data-action="cancelReplace">Annuler</button>
+        </div>
+
+        <!-- New key, shown once -->
+        <div class="twofa-setup-panel" id="newkey-panel" hidden>
+          <h3 class="panel-title" id="newkey-title" tabindex="-1">Ta nouvelle clé de secours</h3>
+          <p class="recovery-text">
+            L'ancienne clé ne marche plus. <strong>Celle-ci ne sera plus jamais affichée.</strong>
+          </p>
+          <p class="recovery-text" id="newkey-help">
+            Garde-la hors de ce serveur : imprimée et rangée dans un endroit sûr.
+            Ne la transmets à personne.
+          </p>
+          <details class="keys-explainer">
+            <summary class="keys-explainer__title">Comment marchent les clés de Cléa ?</summary>
+            <p>Cléa utilise un système tri-clés pour chiffrer tes données. Chaque clé a un nom qui lui est propre et un rôle unique.</p>
+            <p><strong>La clé de l'organisation</strong> permet de chiffrer tes données sensibles qui sont stockées dans Cléa. Cette clé est directement enfermée et chiffrée par la clé maîtresse et celle de secours dans la base, personne ne peut la voir. Elle peut être ouverte avec la clé maîtresse ou celle de secours. Pour savoir en détail quelles sont les données qui sont chiffrées, tu peux consulter <a href="https://github.com/Citizenfive-fr/Clea/wiki/Chiffrement" target="_blank" rel="noopener noreferrer">la page du wiki sur le chiffrement (s'ouvre dans un nouvel onglet)</a>.</p>
+            <p><strong>La clé maîtresse</strong> est essentielle pour le bon fonctionnement quotidien de Cléa car elle permet d'ouvrir la clé de l'organisation et donc de déchiffrer le contenu chiffré. Cette clé doit être gardée par la personne qui gère et maintient le serveur où Cléa est hébergée. Cléa doit pouvoir accéder à cette clé au moment où il est nécessaire de déchiffrer le contenu. Il est conseillé de faire une copie de cette clé en dehors du serveur.</p>
+            <p><strong>La clé de secours</strong> fait office de double de secours pour ouvrir la clé de l'organisation si tu as perdu la clé maîtresse. Il est fortement conseillé que tu gardes cette clé toi-même et que tu ne l'utilises qu'en cas de besoin dans Cléa.</p>
+            <p>Dans le cas où la clé maîtresse et la clé de secours sont perdues, il ne sera plus possible de déchiffrer le contenu sensible.</p>
+          </details>
+          <label for="newkey" class="field-label">Nouvelle clé de secours</label>
+          <textarea id="newkey" class="recovery-key" rows="4" readonly
+                    spellcheck="false" autocomplete="off" aria-describedby="newkey-help"></textarea>
+          <button type="button" class="btn btn--outline" data-action="copyNewKey">Copier la clé</button>
+          <p id="newkey-copy-status" class="copy-status" role="status" aria-live="polite"></p>
+          <label class="recovery-check">
+            <input type="checkbox" id="newkey-saved" aria-describedby="newkey-hint">
+            <span>J'ai sauvegardé cette clé dans un endroit sûr</span>
+          </label>
+          <p id="newkey-hint" class="hint" style="margin-top:0.5rem">Coche la case pour terminer.</p>
+          <button type="button" class="btn" id="newkey-done" style="width:100%;margin-top:0.75rem" data-action="finishNewKey" disabled>Terminer</button>
+        </div>
+
+        <details class="help-details">
+          <summary>Que faire si…</summary>
+          <dl>
+            <dt>Tu as perdu ta clé de secours</dt>
+            <dd>Demande à la personne qui gère ou maintient le serveur de lancer la commande <code>clea new-recovery-key</code>. Celle-ci créera une nouvelle clé de secours et invalidera l'ancienne clé. Une fois que tu as récupéré la clé, tu peux régénérer une nouvelle clé de secours avec le bouton « Remplacer ma clé », plus haut sur cette page. Cela invalidera la clé créée par la commande <code>clea new-recovery-key</code> et tu seras la seule personne à connaître la nouvelle clé.</dd>
+            <dt>La clé maîtresse du serveur est perdue</dt>
+            <dd>La personne qui gère ou maintient le serveur peut remettre Cléa en marche avec une nouvelle clé maîtresse, grâce à la commande <code>clea recover</code>, mais il lui faut ta clé de secours. Ensuite, pense à lui demander la nouvelle clé de secours. Si tu veux être la seule personne à la connaître, tu peux régénérer une clé de secours avec le bouton « Remplacer ma clé », plus haut sur cette page.</dd>
+            <dt>La personne qui gère ou maintient le serveur veut changer la clé maîtresse</dt>
+            <dd>Elle lance <code>clea rotate-key</code>. Ta clé de secours ne change pas.</dd>
+            <dt>Les deux clés sont perdues</dt>
+            <dd>Les données chiffrées ne peuvent plus être récupérées.</dd>
+          </dl>
+        </details>
+
+        <hr class="section-divider">
+      </section>
+
       <!-- Admin: team management -->
       <div id="admin-section" style="display:none">
         <p class="section-title">Administration de l'équipe</p>
@@ -215,6 +379,7 @@
         totpEnabled = u.totp_enabled;
         renderTotpStatus();
         if (u.role !== 'member') document.getElementById('admin-section').style.display = '';
+        if (u.role === 'owner') loadRecoveryStatus();
       })
       .catch(() => window.location.href = '/login');
 
@@ -436,13 +601,172 @@
       }
     });
 
+    // ── Recovery key (owner only) ──
+    const $ = (id) => document.getElementById(id);
+    let newKeyPending = false;
+
+    function warnBeforeLeaving(e) {
+      if (newKeyPending) { e.preventDefault(); e.returnValue = ''; }
+    }
+
+    function showMsg(id, text) { const el = $(id); el.textContent = text; el.classList.add('visible'); }
+    function hideMsgs(...ids) { ids.forEach(id => $(id).classList.remove('visible')); }
+
+    async function loadRecoveryStatus() {
+      try {
+        const res = await fetch('/api/recovery-key');
+        if (!res.ok) return;
+        const data = await res.json();
+        const how = {
+          'setup': 'créée au setup',
+          'profile': 'remplacée dans Mon profil',
+          'recover': "recréée par la personne qui gère le serveur, lors d'une récupération de la clé maîtresse",
+          'new-recovery-key': "recréée par la personne qui gère le serveur",
+        }[data.source] || 'créée';
+        $('recovery-date').textContent = data.created_at
+          ? how + ' le ' + new Date(data.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+          : how + ', date inconnue';
+        // Recreated on the server and not yet acknowledged by the owner
+        $('recovery-host-hint').classList.toggle('visible', data.notice === true);
+        $('recovery-section').hidden = false;
+        // Link from the notice on other pages: the section was hidden when the page loaded
+        if (window.location.hash === '#recovery-title') {
+          $('recovery-title').setAttribute('tabindex', '-1');
+          $('recovery-title').focus();
+        }
+      } catch { /* section stays hidden */ }
+    }
+
+    function hideNotice() {
+      $('recovery-host-hint').classList.remove('visible');
+      document.querySelector('.notice-toast')?.remove();
+    }
+
+    async function dismissNotice() {
+      try {
+        const res = await fetch('/api/recovery-key/notice/dismiss', { method: 'POST' });
+        if (res.ok) hideNotice();
+      } catch { /* the box stays: nothing changed on the server */ }
+    }
+
+    function showVerifyForm() {
+      $('replace-panel').hidden = true;
+      $('verify-panel').hidden = false;
+      $('verify-key').focus();
+    }
+
+    function cancelVerify() {
+      $('verify-panel').hidden = true;
+      $('verify-key').value = '';
+      hideMsgs('verify-error', 'verify-success');
+    }
+
+    async function confirmVerify() {
+      hideMsgs('verify-error', 'verify-success');
+      const recovery_key = $('verify-key').value.trim();
+      if (!recovery_key) { showMsg('verify-error', 'Colle ta clé de secours.'); return; }
+      try {
+        const res = await fetch('/api/recovery-key/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ recovery_key }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { showMsg('verify-error', data.error || 'Erreur.'); return; }
+        $('verify-key').value = '';
+        if (data.valid) {
+          showMsg('verify-success', "C'est bien ta clé de secours actuelle.");
+          hideNotice(); // the server cleared the warning too
+        }
+        else showMsg('verify-error', "Cette clé n'est pas ta clé de secours actuelle.");
+      } catch {
+        showMsg('verify-error', 'Impossible de contacter le serveur.');
+      }
+    }
+
+    function showReplaceForm() {
+      $('verify-panel').hidden = true;
+      $('replace-panel').hidden = false;
+      $('replace-key').focus();
+    }
+
+    function cancelReplace() {
+      $('replace-panel').hidden = true;
+      $('replace-key').value = '';
+      $('replace-password').value = '';
+      hideMsgs('replace-error');
+    }
+
+    async function confirmReplace() {
+      hideMsgs('replace-error');
+      const recovery_key = $('replace-key').value.trim();
+      const password = $('replace-password').value;
+      if (!recovery_key || !password) {
+        showMsg('replace-error', 'La clé de secours actuelle et le mot de passe sont requis.');
+        return;
+      }
+      try {
+        const res = await fetch('/api/recovery-key/replace', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ recovery_key, password }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { showMsg('replace-error', data.error || 'Erreur.'); return; }
+        cancelReplace();
+        hideNotice(); // the server cleared the warning when the key was replaced
+        $('recovery-section').querySelector('.recovery-actions').hidden = true;
+        $('newkey').value = data.recovery_key;
+        $('newkey-saved').checked = false;
+        $('newkey-done').disabled = true;
+        $('newkey-panel').hidden = false;
+        $('newkey-title').focus();
+        newKeyPending = true;
+        window.addEventListener('beforeunload', warnBeforeLeaving);
+        loadRecoveryStatus();
+      } catch {
+        showMsg('replace-error', 'Impossible de contacter le serveur.');
+      }
+    }
+
+    async function copyNewKey() {
+      const status = $('newkey-copy-status');
+      try {
+        await navigator.clipboard.writeText($('newkey').value);
+        status.textContent = 'Clé copiée.';
+      } catch {
+        $('newkey').focus();
+        $('newkey').select();
+        status.textContent = 'Copie automatique impossible : la clé est sélectionnée, fais Ctrl+C.';
+      }
+    }
+
+    $('newkey-saved').addEventListener('change', (e) => { $('newkey-done').disabled = !e.target.checked; });
+
+    function finishNewKey() {
+      if (!$('newkey-saved').checked) return;
+      newKeyPending = false;
+      window.removeEventListener('beforeunload', warnBeforeLeaving);
+      $('newkey').value = '';
+      $('newkey-copy-status').textContent = '';
+      $('newkey-panel').hidden = true;
+      $('recovery-section').querySelector('.recovery-actions').hidden = false;
+      $('recovery-title').setAttribute('tabindex', '-1');
+      $('recovery-title').focus();
+    }
+
     // Inline handlers are blocked by the CSP: one delegated listener instead
-    const actions = { startSetup, showDisableForm, confirmSetup, cancelSetup, confirmDisable, cancelDisable, logout };
+    const actions = {
+      startSetup, showDisableForm, confirmSetup, cancelSetup, confirmDisable, cancelDisable, logout,
+      showVerifyForm, cancelVerify, confirmVerify, showReplaceForm, cancelReplace, confirmReplace,
+      copyNewKey, finishNewKey, dismissNotice,
+    };
     document.addEventListener('click', (e) => {
       const el = e.target.closest('[data-action]');
       const fn = el && actions[el.dataset.action];
       if (fn) fn();
     });
   </script>
+  <script src="/js/recovery-notice.js"></script>
 </body>
 </html>

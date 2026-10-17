@@ -50,7 +50,9 @@ pub fn build(state: AppState) -> Router {
 /// Headers added to every response. The Content-Security-Policy is set per page
 /// in routes::app::html_page because it carries a per-request nonce.
 async fn security_headers(State(state): State<AppState>, req: Request, next: Next) -> Response {
-    let is_api = req.uri().path().starts_with("/api");
+    let path = req.uri().path();
+    let is_api = path.starts_with("/api");
+    let is_asset = path.starts_with("/css/") || path.starts_with("/js/");
     let mut res = next.run(req).await;
     let h = res.headers_mut();
 
@@ -85,6 +87,12 @@ async fn security_headers(State(state): State<AppState>, req: Request, next: Nex
     if is_api {
         h.entry(header::CACHE_CONTROL)
             .or_insert(HeaderValue::from_static("no-store"));
+    }
+    // CSS/JS: the browser keeps its copy but checks it is still current (a cheap 304),
+    // so an update of Cléa is never shown with stale styles or scripts
+    if is_asset {
+        h.entry(header::CACHE_CONTROL)
+            .or_insert(HeaderValue::from_static("no-cache"));
     }
     res
 }

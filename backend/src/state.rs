@@ -1,4 +1,6 @@
-use crate::{config::Config, password, ratelimit::RateLimiter, routes::news::NewsItem};
+use crate::{
+    config::Config, keys::OrgKey, password, ratelimit::RateLimiter, routes::news::NewsItem,
+};
 use sqlx::PgPool;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -24,6 +26,8 @@ pub struct AppState {
     pub totp_user_limiter: Arc<RateLimiter>,
     /// Failed password re-checks of a logged-in user (password change, 2FA disable)
     pub reauth_limiter: Arc<RateLimiter>,
+    /// Opened organization keys, so they are not unlocked on every request (lost on restart)
+    pub org_keys: Arc<Mutex<HashMap<Uuid, OrgKey>>>,
     /// Outbound HTTP client (RSS feeds only)
     pub http: reqwest::Client,
     /// Last fetched items per feed source (name -> fetch time, items), see routes/news.rs
@@ -42,6 +46,7 @@ impl AppState {
         let dummy_hash = password::hash_sync(&Uuid::new_v4().to_string())
             .expect("Argon2 dummy hash generation failed");
         Self {
+            org_keys: Arc::new(Mutex::new(HashMap::new())),
             http: reqwest::Client::builder()
                 .timeout(Duration::from_secs(10))
                 .redirect(reqwest::redirect::Policy::limited(3))
