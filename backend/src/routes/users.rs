@@ -55,7 +55,7 @@ pub async fn delete(
     }
     if session.user_id == user_id {
         return Err(AppError::BadRequest(
-            "Impossible de supprimer votre propre compte".into(),
+            "Impossible de supprimer ton propre compte".into(),
         ));
     }
 
@@ -101,7 +101,7 @@ pub async fn logout_sessions(
 ) -> Result<StatusCode, AppError> {
     if session.user_id == user_id {
         return Err(AppError::BadRequest(
-            "Utilisez /api/auth/logout pour vous déconnecter vous-même".into(),
+            "Pour te déconnecter toi-même, utilise la déconnexion habituelle".into(),
         ));
     }
 

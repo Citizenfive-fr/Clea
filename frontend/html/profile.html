@@ -147,7 +147,7 @@
       <p class="section-title">Nom d'utilisateur</p>
       <form id="username-form" novalidate>
         <div class="field">
-          <input id="username-input" type="text" placeholder="Votre nom d'utilisateur" maxlength="50" autocomplete="username">
+          <input id="username-input" type="text" placeholder="Ton nom d'utilisateur" maxlength="50" autocomplete="username">
           <span class="hint">Affiché dans la navigation. 50 caractères max.</span>
         </div>
         <div class="msg error" id="username-error" role="alert"></div>
@@ -177,15 +177,15 @@
       <!-- Setup panel (QR + confirm) -->
       <div class="twofa-setup-panel" id="twofa-setup-panel" style="display:none">
         <p style="font-size:0.9rem;font-weight:600;margin-bottom:0.5rem">Configurer l'application d'authentification</p>
-        <p style="font-size:0.8rem;color:var(--muted-fg);margin-bottom:0">Scannez ce QR code avec Google Authenticator, Authy ou Bitwarden.</p>
+        <p style="font-size:0.8rem;color:var(--muted-fg);margin-bottom:0">Scanne ce QR code avec Google Authenticator, Authy ou Bitwarden.</p>
         <div class="qr-wrap">
           <img id="twofa-qr" src="" alt="QR Code" width="180" height="180">
           <div>
-            <p class="secret-hint" style="margin-bottom:0.375rem">Ou entrez manuellement :</p>
+            <p class="secret-hint" style="margin-bottom:0.375rem">Ou entre-le à la main :</p>
             <div class="secret-code" id="twofa-secret"></div>
           </div>
         </div>
-        <p style="font-size:0.85rem;margin-bottom:0.5rem">Entrez le code affiché pour confirmer :</p>
+        <p style="font-size:0.85rem;margin-bottom:0.5rem">Entre le code affiché pour confirmer :</p>
         <input id="twofa-confirm-code" type="text" inputmode="numeric" pattern="[0-9]{6}"
                placeholder="000000" maxlength="6" autocomplete="one-time-code"
                style="width:100%;box-sizing:border-box;background:oklch(0.14 0.015 240);border:1px solid var(--border);border-radius:8px;padding:0.625rem 0.875rem;font-size:1.1rem;font-family:inherit;color:var(--fg);outline:none;text-align:center;letter-spacing:0.4em;">
@@ -584,7 +584,7 @@
         });
 
         if (res.status === 204) {
-          okEl.textContent = 'Mot de passe mis à jour. Vous allez être déconnecté(e)…';
+          okEl.textContent = 'Mot de passe mis à jour. Tu vas être déconnecté(e)…';
           okEl.classList.add('visible');
           e.target.reset();
           setTimeout(() => window.location.href = '/login', 2000);
