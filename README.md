@@ -40,7 +40,7 @@ Je suis juriste en droit du numérique, spécialisé en protection des données.
 
 ## Installation
 
-Cléa s'installe **sur votre propre serveur**. Le guide d'installation se trouve dans le [wiki](https://github.com/Citizenfive-fr/Clea/wiki/Installation).
+Cléa s'installe **sur votre propre serveur**. Le guide d'installation se trouve dans le [wiki](https://git.citizenfive.fr/Citizenfive-fr/Clea/wiki/Installation).
 
 ---
 
@@ -48,7 +48,7 @@ Cléa s'installe **sur votre propre serveur**. Le guide d'installation se trouv
 
 Vos données sensibles sont protégées grâce au **chiffrement**.  
 
-Au premier lancement, Cléa **affiche une clé de secours** une seule fois. Il est **impératif** de la garder précieusement. Pour plus d'informations, voir [la page de chiffrement du wiki](https://github.com/Citizenfive-fr/Clea/wiki/Chiffrement).
+Au premier lancement, Cléa **affiche une clé de secours** une seule fois. Il est **impératif** de la garder précieusement. Pour plus d'informations, voir [la page de chiffrement du wiki](https://git.citizenfive.fr/Citizenfive-fr/Clea/wiki/Chiffrement).
 
 ---
 
