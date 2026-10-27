@@ -6,7 +6,7 @@
 
 Dans le cas où tu aurais découvert **une faille** dans Cléa **surtout ne la mentionne pas** dans une issue publique !
 
-Fais-le plutôt ici : [Signaler une faille](https://github.com/Citizenfive-fr/Clea/security/advisories/new)
+Écris-moi plutôt par e-mail, à [dev@citizenfive.fr](mailto:dev@citizenfive.fr).
 
 Attention à ne pas envoyer de données personnelles. **Un exemple suffit**.
 

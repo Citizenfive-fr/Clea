@@ -223,7 +223,7 @@ svg  { display: block; flex-shrink: 0; }
 
 .navbar__ctas  { display: none; align-items: center; justify-content: flex-end; gap: 0.5rem; }
 
-.navbar__github {
+.navbar__source {
   width: 2rem; height: 2rem; padding: 0;
   display: inline-flex; align-items: center; justify-content: center;
 }
