@@ -31,25 +31,14 @@ pub async fn setup(
     let mut raw = [0u8; 20];
     keys::fill_random(&mut raw);
 
-    let secret_b32 = match totp_rs::Secret::Raw(raw.to_vec()).to_encoded() {
-        totp_rs::Secret::Encoded(s) => s,
-        _ => return Err(AppError::Internal("TOTP encoding failed".into())),
-    };
+    let secret_b32 = encode_secret(&raw)?;
+    let totp = new_totp(raw.to_vec(), &session.email)?;
 
-    let totp = totp_rs::TOTP::new(
-        totp_rs::Algorithm::SHA1,
-        6,
-        1,
-        30,
-        raw.to_vec(),
-        Some("Cléa".to_string()),
-        session.email.clone(),
-    )
-    .map_err(|e| AppError::Internal(e.to_string()))?;
-
-    let url = totp.get_url();
+    let url = totp
+        .to_url()
+        .map_err(|e| AppError::Internal(e.to_string()))?;
     let qr = totp
-        .get_qr_base64()
+        .to_qr_base64()
         .map_err(|e| AppError::Internal(e.to_string()))?;
 
     // Encrypted with the organization key, bound to the user
@@ -284,20 +273,7 @@ fn matching_step(secret_b32: &str, email: &str, code: &str) -> Result<Option<i64
         return Ok(None);
     }
 
-    let secret_bytes = totp_rs::Secret::Encoded(secret_b32.to_string())
-        .to_bytes()
-        .map_err(|e| AppError::Internal(e.to_string()))?;
-
-    let totp = totp_rs::TOTP::new(
-        totp_rs::Algorithm::SHA1,
-        6,
-        1,
-        30,
-        secret_bytes,
-        Some("Cléa".to_string()),
-        email.to_string(),
-    )
-    .map_err(|e| AppError::Internal(e.to_string()))?;
+    let totp = new_totp(decode_secret(secret_b32)?, email)?;
 
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -308,7 +284,7 @@ fn matching_step(secret_b32: &str, email: &str, code: &str) -> Result<Option<i64
     // Check every candidate (no early exit) to keep timing independent of the match
     let mut found = None;
     for step in (current_step - 1)..=(current_step + 1) {
-        let expected = totp.generate((step * 30) as u64);
+        let expected = totp.generate((step * 30) as u64).to_string();
         if constant_time_eq(expected.as_bytes(), code.as_bytes()) {
             found = Some(step);
         }
@@ -316,6 +292,58 @@ fn matching_step(secret_b32: &str, email: &str, code: &str) -> Result<Option<i64
     Ok(found)
 }
 
+/// Base32 form of the secret: what is stored (encrypted) and shown to the user.
+fn encode_secret(raw: &[u8]) -> Result<String, AppError> {
+    Ok(totp_rs::Secret::from(raw).to_base32())
+}
+
+fn decode_secret(secret_b32: &str) -> Result<Vec<u8>, AppError> {
+    totp_rs::Secret::try_from_base32(secret_b32)
+        .map(|s| s.to_vec())
+        .map_err(|e| AppError::Internal(e.to_string()))
+}
+
+/// The one TOTP setting used everywhere: SHA-1, 6 digits, 30 s, issuer "Cléa".
+/// These are what authenticator apps expect; changing them breaks every enrolled account.
+fn new_totp(secret: Vec<u8>, email: &str) -> Result<totp_rs::Totp, AppError> {
+    // Every setting written out, so a change of library defaults cannot slip in
+    totp_rs::Builder::new()
+        .with_algorithm(totp_rs::Algorithm::SHA1)
+        .with_digits(6)
+        .with_skew(1)
+        .with_step_duration(30)
+        .with_secret(secret)
+        .with_issuer(Some("Cléa"))
+        .with_account_name(email)
+        .build()
+        .map_err(|e| AppError::Internal(e.to_string()))
+}
+
 fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
     a.len() == b.len() && a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Values made with totp-rs 5 and checked against RFC 6238: a library update must
+    /// give the same secret encoding, the same codes and the same otpauth link,
+    /// or every enrolled authenticator app stops working.
+    #[test]
+    fn codes_and_link_stay_compatible_with_enrolled_apps() {
+        let raw: Vec<u8> = (1..=20).collect();
+        let b32 = encode_secret(&raw).unwrap();
+        assert_eq!(b32, "AEBAGBAFAYDQQCIKBMGA2DQPCAIREEYU");
+        assert_eq!(decode_secret(&b32).unwrap(), raw);
+
+        let totp = new_totp(raw, "owner@test.local").unwrap();
+        assert_eq!(totp.generate(1_700_000_000).to_string(), "957349");
+        assert_eq!(totp.generate(2_000_000_010).to_string(), "542129");
+        assert_eq!(
+            totp.to_url().unwrap(),
+            "otpauth://totp/Cl%C3%A9a:owner%40test.local?secret=AEBAGBAFAYDQQCIKBMGA2DQPCAIREEYU&issuer=Cl%C3%A9a"
+        );
+        assert!(totp.to_qr_base64().is_ok());
+    }
 }
