@@ -10,8 +10,8 @@
 //! Keys come from the OS random source and are wiped from memory when dropped.
 
 use aes_gcm::{
-    aead::{rand_core::RngCore, Aead, AeadCore, KeyInit, OsRng, Payload},
-    Aes256Gcm, Nonce,
+    aead::{Aead, Generate, KeyInit, Nonce, Payload},
+    Aes256Gcm,
 };
 use hkdf::Hkdf;
 use sha2::Sha256;
@@ -159,7 +159,7 @@ fn master_cipher_key(master_key: &str) -> Zeroizing<[u8; KEY_LEN]> {
 
 /// Fills a buffer from the operating system's random source (for keys and secrets).
 pub fn fill_random(buf: &mut [u8]) {
-    OsRng.fill_bytes(buf);
+    getrandom::fill(buf).expect("the OS random source must be available");
 }
 
 fn seal(
@@ -169,7 +169,8 @@ fn seal(
     plaintext: &[u8],
 ) -> Result<String, AppError> {
     let cipher = Aes256Gcm::new_from_slice(key).map_err(|_| internal("Clé invalide"))?;
-    let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
+    // Random 96-bit nonce from the OS random source (getrandom)
+    let nonce = Nonce::<Aes256Gcm>::generate();
     let ciphertext = cipher
         .encrypt(
             &nonce,
@@ -196,7 +197,8 @@ fn open(key: &[u8; KEY_LEN], prefix: &str, aad: &[u8], stored: &str) -> Result<V
     let cipher = Aes256Gcm::new_from_slice(key).map_err(|_| internal("Clé invalide"))?;
     cipher
         .decrypt(
-            Nonce::from_slice(nonce),
+            &Nonce::<Aes256Gcm>::try_from(nonce)
+                .map_err(|_| internal("Valeur chiffrée invalide"))?,
             Payload {
                 msg: ciphertext,
                 aad,
@@ -226,6 +228,23 @@ pub(crate) fn from_hex(s: &str) -> Option<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // Made with aes-gcm 0.10 and hkdf 0.12: updates must keep opening existing data.
+    const REF_MASTER: &str = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
+    const REF_ORG: &str = "11111111-2222-3333-4444-555555555555";
+    const REF_LOCKED: &str = "k1:4abf1ecc62f0819ddfbc6a87d1ab391537fcea00dc0990e9c80f10715c76904e11361b91cfbeae48efc0b60ef29b0e6650edf74d274c1792b8cb6335";
+    const REF_VALUE: &str = "v2:3ff658c7615bdb05778502961048438b75665302197f0f54aed188521316d0770a9a60f2173ec09c295a5507";
+
+    #[test]
+    fn existing_locked_keys_and_values_still_open_after_updates() {
+        let org = Uuid::parse_str(REF_ORG).unwrap();
+        let key = unlock_org_key(REF_MASTER, org, REF_LOCKED).unwrap();
+        assert_eq!(key.as_bytes(), &[7u8; 32]);
+        assert_eq!(
+            key.decrypt(b"user-ref", REF_VALUE).unwrap(),
+            "JBSWY3DPEHPK3PXP"
+        );
+    }
 
     const MASTER: &str = "0123456789abcdef0123456789abcdef";
     const OTHER_MASTER: &str = "another-master-key-another-master-key";

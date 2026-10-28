@@ -4,8 +4,8 @@
 //! thread pool, and a semaphore bounds how many run at once (see `AppState`).
 
 use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
-    Algorithm, Argon2, Params, PasswordHash, PasswordVerifier, Version,
+    password_hash::PasswordHasher, Algorithm, Argon2, Params, PasswordHash, PasswordVerifier,
+    Version,
 };
 
 use crate::{error::AppError, state::AppState};
@@ -21,9 +21,9 @@ fn internal(e: impl ToString) -> AppError {
 
 pub fn hash_sync(password: &str) -> Result<String, AppError> {
     let params = Params::new(MEMORY_KIB, ITERATIONS, LANES, None).map_err(internal)?;
-    let salt = SaltString::generate(&mut OsRng);
+    // The salt (16 bytes) is drawn by the library from the OS random source (getrandom)
     Argon2::new(Algorithm::Argon2id, Version::V0x13, params)
-        .hash_password(password.as_bytes(), &salt)
+        .hash_password(password.as_bytes())
         .map(|h| h.to_string())
         .map_err(internal)
 }
@@ -62,6 +62,29 @@ pub async fn verify(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Hash made with argon2 0.5: a library update must keep reading existing passwords.
+    const HASH_FROM_ARGON2_0_5: &str =
+        "$argon2id$v=19$m=19456,t=2,p=1$75PPYKcCH/xGsm8hWm7qSA$+YDFy1pPJtJsWNtevr9O1CC0P3f1ZMwLaj5TBAP6sME";
+
+    #[test]
+    fn existing_hashes_still_verify_after_updates() {
+        assert!(verify_sync(
+            "mot de passe de référence 1",
+            HASH_FROM_ARGON2_0_5
+        ));
+        assert!(!verify_sync("autre mot de passe", HASH_FROM_ARGON2_0_5));
+    }
+
+    #[test]
+    fn new_hashes_keep_the_same_settings() {
+        let hash = hash_sync("un mot de passe").unwrap();
+        assert!(
+            hash.starts_with("$argon2id$v=19$m=19456,t=2,p=1$"),
+            "{hash}"
+        );
+        assert!(verify_sync("un mot de passe", &hash));
+    }
 
     #[test]
     fn hash_then_verify() {

@@ -82,7 +82,11 @@ pub fn random_token() -> String {
 pub fn hash_token(token: &str) -> String {
     let mut hasher = Sha256::new();
     hasher.update(token.as_bytes());
-    format!("{:x}", hasher.finalize())
+    hasher
+        .finalize()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
 }
 
 pub fn extract_session_token(headers: &axum::http::HeaderMap) -> Option<String> {
@@ -91,4 +95,19 @@ pub fn extract_session_token(headers: &axum::http::HeaderMap) -> Option<String> 
         let kv = kv.trim();
         kv.strip_prefix("session=").map(|v| v.to_string())
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Session and invitation tokens are stored hashed: the format must never change,
+    /// or every stored session would stop matching.
+    #[test]
+    fn token_hash_format_is_stable() {
+        assert_eq!(
+            hash_token("jeton-de-reference"),
+            "3305060dbfb3563498019ac63b51fded4a96ed71bc01853861d6b8d1da5788b2"
+        );
+    }
 }
