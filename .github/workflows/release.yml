@@ -53,11 +53,11 @@ jobs:
           PRERELEASE: ${{ github.event.release.prerelease }}
         run: |
           docker push "${IMAGE}:${FULL}"
-          # Sign the exact image that was built (its digest), not a tag that could move
-          REF=$(docker inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "${IMAGE}:${FULL}" \
-            | grep "^${IMAGE}@sha256:" | head -n 1)
-          [ -n "$REF" ] || { echo "Image digest not found after push"; exit 1; }
-          echo "ref=${REF}" >> "$GITHUB_OUTPUT"
+          # Sign the exact image that was pushed (its digest), not a tag that could move.
+          # The digest is read from the registry itself: the local engine may report another one.
+          DIGEST=$(docker manifest inspect --verbose "${IMAGE}:${FULL}" | jq -r '.Descriptor.digest')
+          case "$DIGEST" in sha256:*) ;; *) echo "Image digest not found in the registry"; exit 1 ;; esac
+          echo "ref=${IMAGE}@${DIGEST}" >> "$GITHUB_OUTPUT"
           if [ "$PRERELEASE" != "true" ]; then
             for TAG in "$MINOR" latest; do
               docker tag "${IMAGE}:${FULL}" "${IMAGE}:${TAG}"
@@ -73,6 +73,12 @@ jobs:
         # Classic signature format (".sig" tag): the forge registry has no OCI referrers API,
         # which the cosign v3 default format needs
         run: cosign sign --yes --new-bundle-format=false --use-signing-config=false --key env://COSIGN_KEY "$REF"
+
+      # Check the signature like a user would, so a bad signature fails the release
+      - name: Verify signature
+        env:
+          REF: ${{ steps.push.outputs.ref }}
+        run: cosign verify --new-bundle-format=false --key cosign.pub "$REF" > /dev/null
 
       - name: Clean up
         if: always()
