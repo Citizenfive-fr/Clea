@@ -70,7 +70,9 @@ jobs:
           COSIGN_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
           REF: ${{ steps.push.outputs.ref }}
-        run: cosign sign --yes --key env://COSIGN_KEY "$REF"
+        # Classic signature format (".sig" tag): the forge registry has no OCI referrers API,
+        # which the cosign v3 default format needs
+        run: cosign sign --yes --new-bundle-format=false --use-signing-config=false --key env://COSIGN_KEY "$REF"
 
       - name: Clean up
         if: always()
