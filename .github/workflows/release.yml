@@ -18,7 +18,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: sigstore/cosign-installer@v3
+      - uses: sigstore/cosign-installer@v4
 
       - name: Compute version
         id: version
@@ -38,12 +38,18 @@ jobs:
         run: docker build --tag "${IMAGE}:${{ steps.version.outputs.full }}" .
 
       - name: Push
+        id: push
         env:
           FULL: ${{ steps.version.outputs.full }}
           MINOR: ${{ steps.version.outputs.minor }}
           PRERELEASE: ${{ github.event.release.prerelease }}
         run: |
           docker push "${IMAGE}:${FULL}"
+          # Sign the exact image that was built (its digest), not a tag that could move
+          REF=$(docker inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "${IMAGE}:${FULL}" \
+            | grep "^${IMAGE}@sha256:" | head -n 1)
+          [ -n "$REF" ] || { echo "Image digest not found after push"; exit 1; }
+          echo "ref=${REF}" >> "$GITHUB_OUTPUT"
           if [ "$PRERELEASE" != "true" ]; then
             for TAG in "$MINOR" latest; do
               docker tag "${IMAGE}:${FULL}" "${IMAGE}:${TAG}"
@@ -55,7 +61,8 @@ jobs:
         env:
           COSIGN_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-        run: cosign sign --yes --key env://COSIGN_KEY "${IMAGE}:${{ steps.version.outputs.full }}"
+          REF: ${{ steps.push.outputs.ref }}
+        run: cosign sign --yes --key env://COSIGN_KEY "$REF"
 
       - name: Clean up
         if: always()
