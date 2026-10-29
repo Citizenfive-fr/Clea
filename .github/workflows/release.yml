@@ -18,6 +18,14 @@ jobs:
         with:
           persist-credentials: false
 
+      # cosign-installer v4 needs envsubst (gettext-base), missing from the runner image
+      - name: Install envsubst
+        run: |
+          command -v envsubst >/dev/null && exit 0
+          SUDO=""; [ "$(id -u)" -eq 0 ] || SUDO=sudo
+          $SUDO apt-get update -qq
+          $SUDO apt-get install -y -qq --no-install-recommends gettext-base
+
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
 
       - name: Compute version
