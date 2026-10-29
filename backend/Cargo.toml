@@ -34,4 +34,4 @@ aes-gcm = { version = "0.11", features = ["zeroize"] }
 getrandom = "0.4"
 hkdf = "0.13"
 zeroize = "1"
-hpke = { version = "0.14", default-features = false, features = ["x25519", "alloc", "aes", "getrandom"] }
+hpke = { version = "0.15", default-features = false, features = ["x25519", "alloc", "aes", "getrandom"] }

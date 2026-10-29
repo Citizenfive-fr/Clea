@@ -167,6 +167,22 @@ fn bad_secret(reason: &str) -> AppError {
 mod tests {
     use super::*;
 
+    // Made with hpke 0.14: a library update must keep the same key format and keep
+    // opening organization keys already locked for a recovery key.
+    const REF_SHOWN: &str = "CLEA-RECOVERY-KEY-0909-0909-0909-0909-0909-0909-0909-0909-0909-0909-0909-0909-0909-0909-0909-0909-7dea";
+    const REF_PUBLIC: &str = "p1:57db4b359f23ae5e146e4e2512056704722506348c150c14753d0c933d04d421";
+    const REF_LOCKED: &str = "r1:714e49c92226e865efae5308d19743687b4a65eedfd9c3ce0fea0a7ad6a0895a6ee00cf49a61a62e7876a08f3f5de3176f202f067e771fe5e99a5ac421e7af20a4d9a4efca32fe8c7f05d3e5d7ec0396";
+
+    #[test]
+    fn existing_recovery_keys_still_work_after_updates() {
+        assert_eq!(display(&[9u8; 32]).as_str(), REF_SHOWN);
+        let secret = RecoverySecret::parse(REF_SHOWN).unwrap();
+        assert_eq!(secret.public_key(), REF_PUBLIC);
+        let org = Uuid::parse_str("11111111-2222-3333-4444-555555555555").unwrap();
+        let key = unlock_with_recovery(&secret, org, REF_LOCKED).unwrap();
+        assert_eq!(key.as_bytes(), &[7u8; 32]);
+    }
+
     #[test]
     fn displayed_format_is_readable() {
         let new = generate();
