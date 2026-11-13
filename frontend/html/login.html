@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Connexion — Cléa</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/main.css">
   <style>
     .login-wrap {
@@ -44,7 +42,7 @@
       font-weight: 500;
     }
     .field input {
-      background: oklch(0.14 0.015 240);
+      background: var(--field-bg);
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 0.625rem 0.875rem;
@@ -74,9 +72,9 @@
       margin-top: 0.5rem;
     }
     .login-error {
-      background: oklch(0.25 0.06 15 / 60%);
-      border: 1px solid oklch(0.45 0.12 15 / 60%);
-      color: oklch(0.85 0.08 15);
+      background: var(--danger-bg);
+      border: 1px solid var(--danger-line);
+      color: var(--danger-fg);
       border-radius: 8px;
       padding: 0.625rem 0.875rem;
       font-size: 0.85rem;

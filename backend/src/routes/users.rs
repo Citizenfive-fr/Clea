@@ -13,6 +13,7 @@ use crate::{audit, error::AppError, session::AuthSession, state::AppState};
 pub struct UserEntry {
     pub id: Uuid,
     pub email: String,
+    pub username: Option<String>,
     pub role: String,
     pub is_active: bool,
 }
@@ -26,7 +27,7 @@ pub async fn list(
     }
 
     let rows = sqlx::query(
-        "SELECT id, email, role, is_active FROM users
+        "SELECT id, email, username, role, is_active FROM users
          WHERE organization_id = $1 ORDER BY created_at",
     )
     .bind(session.org_id)
@@ -38,6 +39,7 @@ pub async fn list(
             .map(|r| UserEntry {
                 id: r.get("id"),
                 email: r.get("email"),
+                username: r.get("username"),
                 role: r.get("role"),
                 is_active: r.get("is_active"),
             })

@@ -39,6 +39,7 @@ pub fn build(state: AppState) -> Router {
         // otherwise the session checks done in routes/app.rs could be bypassed
         .nest_service("/css", ServeDir::new("../frontend/css"))
         .nest_service("/js", ServeDir::new("../frontend/js"))
+        .nest_service("/fonts", ServeDir::new("../frontend/fonts"))
         .route_service("/icon.svg", ServeFile::new("../frontend/icon.svg"))
         .layer(middleware::from_fn_with_state(
             state.clone(),
@@ -52,7 +53,8 @@ pub fn build(state: AppState) -> Router {
 async fn security_headers(State(state): State<AppState>, req: Request, next: Next) -> Response {
     let path = req.uri().path();
     let is_api = path.starts_with("/api");
-    let is_asset = path.starts_with("/css/") || path.starts_with("/js/");
+    let is_asset =
+        path.starts_with("/css/") || path.starts_with("/js/") || path.starts_with("/fonts/");
     let mut res = next.run(req).await;
     let h = res.headers_mut();
 

@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Configuration initiale — Cléa</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/main.css">
   <style>
     .setup-wrap {
@@ -53,7 +51,7 @@
       font-weight: 500;
     }
     .field input {
-      background: oklch(0.14 0.015 240);
+      background: var(--field-bg);
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 0.625rem 0.875rem;
@@ -79,9 +77,9 @@
       font-weight: 600;
     }
     .setup-error {
-      background: oklch(0.25 0.06 15 / 60%);
-      border: 1px solid oklch(0.45 0.12 15 / 60%);
-      color: oklch(0.85 0.08 15);
+      background: var(--danger-bg);
+      border: 1px solid var(--danger-line);
+      color: var(--danger-fg);
       border-radius: 8px;
       padding: 0.625rem 0.875rem;
       font-size: 0.85rem;
@@ -106,11 +104,11 @@
     .recovery-key {
       width: 100%;
       resize: none;
-      background: oklch(0.14 0.015 240);
+      background: var(--field-bg);
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 0.75rem;
-      font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+      font-family: var(--font-mono);
       font-size: 0.95rem;
       line-height: 1.6;
       color: var(--fg);
@@ -130,7 +128,7 @@
     .recovery-check input { width: 1.15rem; height: 1.15rem; margin-top: 0.1rem; flex-shrink: 0; }
     .keys-explainer {
       font-size: 0.85rem; line-height: 1.6;
-      background: oklch(0.16 0.015 240); border: 1px solid var(--border);
+      background: var(--frost-surface); border: 1px solid var(--frost-line);
       border-radius: 10px; padding: 1rem 1.125rem; margin: 0.5rem 0 1.25rem;
     }
     .keys-explainer p { margin: 0 0 0.625rem; }
@@ -157,10 +155,10 @@
       <p class="setup-subtitle">Configuration initiale : crée ton espace de travail.</p>
 
       <form id="setup-form" novalidate>
-        <p class="setup-section">Entreprise</p>
+        <p class="setup-section">Organisation</p>
 
         <div class="field">
-          <label for="org_name">Nom de l'entreprise</label>
+          <label for="org_name">Nom de l'organisation</label>
           <input id="org_name" name="org_name" type="text"
                  placeholder="Ma Société" autocomplete="organization" required>
         </div>
@@ -200,7 +198,7 @@
       <section id="recovery-step" hidden aria-labelledby="recovery-title">
         <h1 id="recovery-title" class="recovery-title" tabindex="-1">Ta clé de secours</h1>
         <p class="recovery-text">
-          Elle sert à récupérer les données chiffrées de ton entreprise si la clé maîtresse
+          Elle sert à récupérer les données chiffrées de ton organisation si la clé maîtresse
           du serveur est perdue. <strong>Elle ne sera plus jamais affichée.</strong>
         </p>
         <p class="recovery-text" id="recovery-help">
@@ -260,7 +258,7 @@
       const password         = form.password.value;
       const password_confirm = form.password_confirm.value;
 
-      if (!org_name)           return showError("Le nom d'entreprise est requis.");
+      if (!org_name)           return showError("Le nom de l'organisation est requis.");
       if (!username)           return showError("Le nom d'utilisateur est requis.");
       if (!email.includes('@')) return showError("L'adresse email est invalide.");
       if (password.length < 12) return showError("Le mot de passe doit contenir au moins 12 caractères.");

@@ -4,84 +4,95 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Actualités — Cléa</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/main.css">
   <style>
-    .page-wrap { max-width: 760px; margin: 0 auto; padding: 0 1.5rem 6rem; }
-    .actu-hero { padding: 10rem 0 4rem; text-align: center; }
-    .section-title { font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; }
-    .section-divider { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+    /* Two columns: the news trail, and a side column with filters and resources */
+    .news-layout {
+      display: grid; grid-template-columns: minmax(0, 1fr) 15rem; gap: 1rem 3.5rem;
+      grid-template-areas: "intro intro" "trail side";
+      max-width: 64rem; margin: 0 auto; align-items: start;
+    }
+    .news-layout > .page-intro { grid-area: intro; }
+    .news-side { grid-area: side; position: sticky; top: 2rem; display: flex; flex-direction: column; gap: 1.75rem; }
+    .news-trail { grid-area: trail; min-width: 0; }
+    @media (max-width: 1100px) {
+      .news-layout { grid-template-columns: minmax(0, 1fr); grid-template-areas: "intro" "side" "trail"; }
+      .news-side { position: static; flex-direction: row; flex-wrap: wrap; gap: 1rem 2rem; }
+      .news-side .resources { display: none; }
+      .resources--bottom { display: block !important; margin-top: 3rem; }
+    }
+    .resources--bottom { display: none; }
 
-    /* Filter bars */
-    .filter-group { margin-bottom: 1.5rem; }
-    .filter-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted-fg); margin-bottom: 0.5rem; }
+    /* Filters */
+    .filter-group .label { display: block; margin-bottom: 0.6rem; }
     .filter-bar { display: flex; gap: 0.4rem; flex-wrap: wrap; }
     .filter-btn {
-      font-size: 0.78rem; font-weight: 600; padding: 0.3rem 0.75rem;
-      border-radius: 20px; border: 1px solid var(--border);
-      background: transparent; color: var(--muted-fg); cursor: pointer;
-      font-family: inherit; transition: all 0.15s;
+      font-size: 0.8rem; font-weight: 500; padding: 0.3rem 0.8rem;
+      border-radius: 999px; border: 1px solid var(--frost-line);
+      background: transparent; color: var(--soft-fg); cursor: pointer;
+      font-family: inherit; transition: color 0.15s, border-color 0.15s, background-color 0.15s;
     }
-    .filter-btn:hover { border-color: var(--brand-teal); color: var(--fg); }
-    .filter-btn.active { background: oklch(0.28 0.04 220); border-color: var(--brand-teal); color: var(--brand-teal); }
+    .filter-btn:hover { color: var(--fg); border-color: color-mix(in oklch, var(--brand-teal) 60%, transparent); }
+    .filter-btn[aria-pressed="true"] { background: color-mix(in oklch, var(--brand-teal) 16%, transparent); border-color: var(--brand-teal); color: var(--brand-teal); }
+    .filter-btn:focus-visible { outline: 2px solid var(--brand-cyan); outline-offset: 2px; }
 
-    /* RSS cards */
-    .news-list { display: flex; flex-direction: column; gap: 0.75rem; }
-    .news-card {
-      padding: 1rem 1.25rem;
-      border-radius: 10px;
-      background: oklch(0.20 0.015 240);
-      border: 1px solid var(--border);
-    }
-    .news-card:hover { border-color: var(--primary); }
-    .news-meta { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
-    .news-source {
-      font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
-      background: oklch(0.28 0.04 220); color: var(--brand-teal);
-      padding: 0.15rem 0.5rem; border-radius: 4px;
-    }
-    .news-label {
-      font-size: 0.68rem; font-weight: 600;
-      background: oklch(0.22 0.02 260); color: var(--muted-fg);
-      border: 1px solid var(--border);
-      padding: 0.12rem 0.45rem; border-radius: 4px;
-    }
-    .news-date { font-size: 0.75rem; color: var(--muted-fg); margin-left: auto; }
-    .news-fav-btn {
-      margin-left: auto; display: inline-flex; align-items: center;
-      background: none; border: none; cursor: pointer; padding: 0.1rem;
-      color: var(--muted-fg); transition: color 0.15s;
-    }
-    .news-date + .news-fav-btn { margin-left: 0; }
-    .news-fav-btn:hover { color: var(--brand-lime); }
-    .news-fav-btn.active { color: var(--brand-lime); }
-    .news-fav-btn.active svg { fill: currentColor; }
-    .news-added-by { font-size: 0.75rem; color: var(--muted-fg); margin-top: 0.3rem; }
-    .news-title {
-      font-size: 0.9rem; font-weight: 500; color: var(--fg);
-      text-decoration: none; display: block; line-height: 1.45;
-    }
-    .news-title:hover { color: var(--brand-teal); text-decoration: underline; text-underline-offset: 3px; }
+    /* Resources */
+    .resources ul { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.6rem; }
+    .resources a { display: flex; flex-direction: column; font-size: 0.875rem; color: var(--fg); }
+    .resources a small { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--brand-teal); }
+    .resources a:hover span { text-decoration: underline; text-underline-offset: 0.2em; }
+    .resources a:focus-visible { outline: 2px solid var(--brand-cyan); outline-offset: 3px; border-radius: 0.25rem; }
 
-    /* Loading / empty states */
-    .state-msg { color: var(--muted-fg); font-size: 0.875rem; padding: 1rem 0; }
-
-    /* Curated links */
-    .resource-list { display: flex; flex-direction: column; gap: 0.5rem; }
-    .resource-item {
-      display: flex; align-items: baseline; gap: 0.75rem;
-      padding: 0.75rem 1rem;
-      border-radius: 8px;
-      background: oklch(0.20 0.015 240);
-      border: 1px solid var(--border);
+    /* The news trail: one aurora thread, a dot per article, grouped by period */
+    /* --rail-x: centre of the thread. Markers are centred on it with translate(-50%) */
+    .trail { --rail-x: 0.5rem; --gutter: 2rem; position: relative; padding-left: var(--gutter); }
+    .trail::before {
+      content: ''; position: absolute; left: calc(var(--rail-x) - 1px); top: 0.5rem; bottom: 0.5rem; width: 2px; border-radius: 2px;
+      background: linear-gradient(var(--brand-teal), var(--brand-cyan), var(--brand-lime), var(--brand-pink));
+      opacity: 0.55;
     }
-    .resource-name { font-size: 0.8rem; font-weight: 600; color: var(--brand-teal); min-width: 90px; }
-    .resource-link { font-size: 0.875rem; color: var(--fg); text-decoration: none; }
-    .resource-link:hover { color: var(--brand-teal); text-decoration: underline; text-underline-offset: 3px; }
+    .period + .period { margin-top: 2.25rem; }
+    .period__title { position: relative; margin-bottom: 1rem; }
+    .period__title::before {
+      content: ''; position: absolute; left: calc(var(--rail-x) - var(--gutter)); top: 50%; width: 0.6rem; height: 0.6rem;
+      transform: translate(-50%, -50%) rotate(45deg); background: var(--bg);
+      box-shadow: inset 0 0 0 2px var(--brand-teal);
+    }
+    .feed { list-style: none; display: flex; flex-direction: column; gap: 1.25rem; }
+    .entry { position: relative; }
+    .entry::before {
+      content: ''; position: absolute; left: calc(var(--rail-x) - var(--gutter)); top: 0.55rem; width: 0.55rem; height: 0.55rem; border-radius: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--bg); box-shadow: inset 0 0 0 2px var(--brand-cyan), 0 0 0 4px var(--bg);
+    }
+    .entry__meta { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; font-size: 0.75rem; color: var(--soft-fg); }
+    .entry__source { font-family: var(--font-mono); letter-spacing: 0.08em; color: var(--brand-teal); }
+    .entry__tag { padding: 0.05rem 0.5rem; border-radius: 999px; border: 1px solid var(--frost-line); }
+    .entry__title { display: block; margin-top: 0.3rem; font-size: 0.975rem; font-weight: 500; line-height: 1.45; color: var(--fg); }
+    .entry__title:hover { text-decoration: underline; text-decoration-color: var(--brand-teal); text-underline-offset: 0.2em; }
+    .entry__title:focus-visible { outline: 2px solid var(--brand-cyan); outline-offset: 3px; border-radius: 0.25rem; }
+    .entry__foot { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.4rem; }
+    .entry__by { font-size: 0.75rem; color: var(--soft-fg); }
+
+    /* "Keep" = leave a fox track on the article */
+    .track-btn {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      padding: 0.15rem 0.5rem 0.15rem 0.35rem; border-radius: 999px; border: 1px solid transparent;
+      background: transparent; color: var(--soft-fg); font: inherit; font-size: 0.75rem; cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .track-btn svg { fill: currentColor; opacity: 0.45; }
+    .track-btn:hover { color: var(--fg); border-color: var(--frost-line); }
+    .track-btn[aria-pressed="true"] { color: var(--brand-lime); }
+    .track-btn[aria-pressed="true"] svg { opacity: 1; }
+    .track-btn:focus-visible { outline: 2px solid var(--brand-cyan); outline-offset: 2px; }
+
+    .state-msg { color: var(--soft-fg); font-size: 0.875rem; padding: 0.5rem 0; }
+    @media (prefers-reduced-motion: reduce) { .filter-btn, .track-btn { transition: none; } }
   </style>
 </head>
 <body>
+  <a href="#main" class="sr-only sr-only--focusable">Aller au contenu</a>
   <div class="page">
     <div class="animated-bg" aria-hidden="true">
       <div class="orb orb--cyan"></div>
@@ -89,165 +100,101 @@
       <div class="orb orb--teal"></div>
     </div>
 
-    <!-- Navbar -->
-    <header class="navbar" id="navbar">
-      <nav class="navbar__inner">
-        <a href="/" class="navbar__brand">
-          <span class="navbar__logo" aria-hidden="true">
-            <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
-              <defs>
-                <linearGradient id="g-nav" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%"   stop-color="var(--brand-cyan)" />
-                  <stop offset="55%"  stop-color="var(--brand-teal)" />
-                  <stop offset="100%" stop-color="var(--brand-pink)" />
-                </linearGradient>
-              </defs>
-              <path d="M16 2a14 14 0 1 0 9.9 23.9l-3.2-3.1A9.6 9.6 0 1 1 22.7 9.2l3.2-3.1A14 14 0 0 0 16 2Z" fill="url(#g-nav)" />
-              <circle cx="16" cy="16" r="4.2" fill="url(#g-nav)" />
-            </svg>
-          </span>
-          <span class="navbar__name-wrap">
-            <span class="navbar__name">Cléa</span>
-            <span class="navbar__tagline"><b>C</b>onformité, <b>L</b>iberté, <b>É</b>quité, <b>A</b>ccessibilité</span>
-          </span>
-        </a>
+    <div class="app">
+      {{SIDEBAR:/actualites}}
+      <main class="main" id="main">
+        <div class="news-layout">
+          <header class="page-intro">
+            <p class="label">Veille RGPD</p>
+            <h1 class="page-intro__title">Les actualités</h1>
+            <p class="page-intro__desc">Les dernières publications de la CNIL et de l'EDPB. Garde un article pour y laisser ta trace : toute l'équipe la voit.</p>
+          </header>
 
-        <div class="navbar__center">
-          <a href="/" class="btn btn--ghost">Accueil</a>
-          <a href="/documentation" class="btn btn--ghost">Comprendre le RGPD</a>
-          <a href="/actualites" class="btn btn--ghost" aria-current="page">Actualités</a>
-          <a href="/app" class="btn btn--primary">
-            Lancer l'app
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-          </a>
+          <!-- Filters first in reading order: they change the list below -->
+          <aside class="news-side" aria-label="Filtres et ressources">
+            <div class="filter-group">
+              <span class="label" id="view-label">Affichage</span>
+              <div class="filter-bar" id="view-bar" role="group" aria-labelledby="view-label">
+                <button type="button" class="filter-btn" aria-pressed="true" data-view="feed">Tous</button>
+                <button type="button" class="filter-btn" aria-pressed="false" data-view="favorites">Traces gardées</button>
+              </div>
+            </div>
+
+            <div class="filter-group" id="source-group">
+              <span class="label" id="source-label">Source</span>
+              <div class="filter-bar" id="source-bar" role="group" aria-labelledby="source-label">
+                <button type="button" class="filter-btn" aria-pressed="true" data-source="">Toutes</button>
+                <button type="button" class="filter-btn" aria-pressed="false" data-source="CNIL">CNIL</button>
+                <button type="button" class="filter-btn" aria-pressed="false" data-source="EDPB">EDPB</button>
+              </div>
+            </div>
+
+            <div class="filter-group" id="label-group" hidden>
+              <span class="label" id="type-label">Type</span>
+              <div class="filter-bar" id="label-bar" role="group" aria-labelledby="type-label"></div>
+            </div>
+
+            <nav class="resources" aria-labelledby="res-title">
+              <span class="label" id="res-title">Ressources</span>
+              <ul>
+                <li><a href="https://www.cnil.fr/fr/actualites" target="_blank" rel="noopener noreferrer"><small>CNIL</small><span>Actualités</span></a></li>
+                <li><a href="https://www.edpb.europa.eu/our-work-tools/our-documents/guidelines_en" target="_blank" rel="noopener noreferrer"><small>EDPB</small><span>Lignes directrices</span></a></li>
+                <li><a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A02016R0679-20160504" target="_blank" rel="noopener noreferrer"><small>Texte RGPD</small><span>Règlement (UE) 2016/679, version consolidée</span></a></li>
+                <li><a href="https://www.enforcementtracker.com/" target="_blank" rel="noopener noreferrer"><small>Sanctions</small><span>GDPR Enforcement Tracker, les amendes en Europe</span></a></li>
+                <li><a href="https://www.legifrance.gouv.fr/loda/id/JORFTEXT000000886460" target="_blank" rel="noopener noreferrer"><small>Droit français</small><span>Loi Informatique et Libertés</span></a></li>
+              </ul>
+            </nav>
+          </aside>
+
+          <section class="news-trail" aria-labelledby="trail-title">
+            <h2 class="sr-only" id="trail-title">Fil de veille</h2>
+            <p class="sr-only" role="status" id="news-status"></p>
+            <div class="trail" id="news-list" aria-busy="true">
+              <p class="state-msg">Chargement…</p>
+            </div>
+            <nav class="resources resources--bottom" aria-label="Ressources (bas de page)">
+              <span class="label">Ressources</span>
+              <ul>
+                <li><a href="https://www.cnil.fr/fr/actualites" target="_blank" rel="noopener noreferrer"><small>CNIL</small><span>Actualités</span></a></li>
+                <li><a href="https://www.edpb.europa.eu/our-work-tools/our-documents/guidelines_en" target="_blank" rel="noopener noreferrer"><small>EDPB</small><span>Lignes directrices</span></a></li>
+                <li><a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A02016R0679-20160504" target="_blank" rel="noopener noreferrer"><small>Texte RGPD</small><span>Règlement (UE) 2016/679, version consolidée</span></a></li>
+                <li><a href="https://www.enforcementtracker.com/" target="_blank" rel="noopener noreferrer"><small>Sanctions</small><span>GDPR Enforcement Tracker, les amendes en Europe</span></a></li>
+                <li><a href="https://www.legifrance.gouv.fr/loda/id/JORFTEXT000000886460" target="_blank" rel="noopener noreferrer"><small>Droit français</small><span>Loi Informatique et Libertés</span></a></li>
+              </ul>
+            </nav>
+          </section>
         </div>
-
-        <div class="navbar__ctas">
-          <a href="/login" class="btn btn--ghost" id="navbar-auth-btn">Se connecter</a>
-          <a href="https://git.citizenfive.fr/Citizenfive-fr/Clea/" target="_blank" rel="noreferrer" class="btn btn--ghost navbar__source" title="Code source sur notre forge Forgejo" aria-label="Code source sur notre forge Forgejo">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-          </a>
-        </div>
-
-        <button type="button" id="navbar-toggle" class="navbar__toggle" aria-label="Ouvrir le menu" aria-expanded="false">
-          <svg id="icon-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <line x1="4" x2="20" y1="6"  y2="6"/>
-            <line x1="4" x2="20" y1="12" y2="12"/>
-            <line x1="4" x2="20" y1="18" y2="18"/>
-          </svg>
-          <svg id="icon-close" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
-            <path d="M18 6 6 18"/><path d="M6 6l12 12"/>
-          </svg>
-        </button>
-      </nav>
-
-      <div id="navbar-mobile" class="navbar__mobile" hidden>
-        <div class="navbar__mobile-inner">
-          <a href="/" class="navbar__mobile-link">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/></svg>
-            Accueil
-          </a>
-          <a href="/documentation" class="navbar__mobile-link">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H2v15h7c1.7 0 3 1.3 3 3V7c0-2.2-1.8-4-4-4Z"/><path d="M16 3h6v15h-7c-1.7 0-3 1.3-3 3V7c0-2.2 1.8-4 4-4Z"/></svg>
-            Comprendre le RGPD
-          </a>
-          <a href="/actualites" class="navbar__mobile-link" aria-current="page">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10l6 6v8a2 2 0 0 1-2 2z"/><path d="M17 20v-8H7v8"/><path d="M7 4v4h8"/></svg>
-            Actualités
-          </a>
-          <div class="navbar__mobile-ctas">
-            <a href="/login" class="btn btn--outline" style="justify-content:center">Se connecter</a>
-            <a href="/app" class="btn btn--primary" style="justify-content:center">
-              Lancer l'app
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-            </a>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <section class="doc-hero actu-hero">
-      <div class="doc-hero__inner">
-        <p class="section-label section-label--teal">Veille RGPD</p>
-        <h1 class="doc-hero__title">Les actualités</h1>
-        <p class="doc-hero__desc">
-          Suis les dernières publications de la CNIL et de l'EDPB, et accède aux ressources de référence.
-        </p>
-      </div>
-    </section>
-
-    <div class="page-wrap">
-      <!-- RSS section -->
-      <p class="section-title">Flux en direct</p>
-
-      <div class="filter-group">
-        <div class="filter-label">Affichage</div>
-        <div class="filter-bar" id="view-bar">
-          <button class="filter-btn active" data-view="feed">Tous</button>
-          <button class="filter-btn" data-view="favorites">Favoris</button>
-        </div>
-      </div>
-
-      <div class="filter-group" id="source-group">
-        <div class="filter-label">Source</div>
-        <div class="filter-bar" id="source-bar">
-          <button class="filter-btn active" data-source="">Toutes</button>
-          <button class="filter-btn" data-source="CNIL">CNIL</button>
-          <button class="filter-btn" data-source="EDPB">EDPB</button>
-        </div>
-      </div>
-
-      <div class="filter-group" id="label-group" style="display:none">
-        <div class="filter-label">Type</div>
-        <div class="filter-bar" id="label-bar"></div>
-      </div>
-
-      <div id="news-list" class="news-list">
-        <p class="state-msg">Chargement…</p>
-      </div>
-
-      <hr class="section-divider">
-
-      <!-- Curated links -->
-      <p class="section-title">Ressources conseillées</p>
-      <div class="resource-list">
-        <div class="resource-item">
-          <span class="resource-name">Actualités</span>
-          <a class="resource-link" href="https://www.cnil.fr/fr/actualites" target="_blank" rel="noopener noreferrer">CNIL</a>
-        </div>
-        <div class="resource-item">
-          <span class="resource-name">Guidelines</span>
-          <a class="resource-link" href="https://www.edpb.europa.eu/our-work-tools/our-documents/guidelines_en" target="_blank" rel="noopener noreferrer">EDPB</a>
-        </div>
-        <div class="resource-item">
-          <span class="resource-name">Texte RGPD</span>
-          <a class="resource-link" href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A02016R0679-20160504" target="_blank" rel="noopener noreferrer">Règlement (UE) 2016/679, texte consolidé</a>
-        </div>
-        <div class="resource-item">
-          <span class="resource-name">Sanctions</span>
-          <a class="resource-link" href="https://www.enforcementtracker.com/" target="_blank" rel="noopener noreferrer">GDPR Enforcement Tracker, suivi des amendes en Europe</a>
-        </div>
-        <div class="resource-item">
-          <span class="resource-name">Droit FR</span>
-          <a class="resource-link" href="https://www.legifrance.gouv.fr/loda/id/JORFTEXT000000886460" target="_blank" rel="noopener noreferrer">Loi Informatique et Libertés (LIL)</a>
-        </div>
-      </div>
+      </main>
     </div>
   </div>
 
-  <script src="/js/navbar.js"></script>
   <script>
     fetch('/api/auth/me')
       .then(r => { if (!r.ok) { window.location.href = '/login'; return null; } return r.json(); })
-      .then(u => { if (u) currentRole = u.role; })
       .catch(() => window.location.href = '/login');
 
     let allItems = [];
     let activeLabel = '';
     let activeSource = '';
     let viewMode = 'feed';
-    let currentRole = 'member';
     const favoritesByLink = new Map();
+    const list = document.getElementById('news-list');
+
+    // Same fox track as the "Comprendre le RGPD" trail
+    const TRACK_ICON = '<svg width="14" height="16" viewBox="-5 -7 10 13" aria-hidden="true"><ellipse cx="-1.15" cy="-3.1" rx="0.85" ry="1.9" transform="rotate(-5 -1.15 -3.1)"/><ellipse cx="1.15" cy="-3.1" rx="0.85" ry="1.9" transform="rotate(5 1.15 -3.1)"/><ellipse cx="-2.6" cy="-0.3" rx="0.8" ry="1.35" transform="rotate(-18 -2.6 -0.3)"/><ellipse cx="2.6" cy="-0.3" rx="0.8" ry="1.35" transform="rotate(18 2.6 -0.3)"/><path d="M -1.6 3.9 Q -1.75 2.25 0 1.95 Q 1.75 2.25 1.6 3.9 Q 0 4.55 -1.6 3.9 Z"/></svg>';
+
+    function escHtml(s) {
+      return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    // Short status for screen readers, instead of reading the whole list again
+    const status = document.getElementById('news-status');
+
+    function setMessage(text) {
+      list.innerHTML = `<p class="state-msg">${escHtml(text)}</p>`;
+      list.setAttribute('aria-busy', 'false');
+      status.textContent = text;
+    }
 
     function loadFavorites() {
       return fetch('/api/news/favorites')
@@ -262,26 +209,21 @@
 
     function loadFeeds(source) {
       activeSource = source;
-      const container = document.getElementById('news-list');
-      container.innerHTML = '<p class="state-msg">Chargement…</p>';
       activeLabel = '';
-
+      list.setAttribute('aria-busy', 'true');
+      setMessage('Chargement…');
       const url = source ? `/api/news/feeds?source=${encodeURIComponent(source)}` : '/api/news/feeds';
-
       Promise.all([fetch(url).then(r => { if (!r.ok) throw new Error(); return r.json(); }), loadFavorites()])
         .then(([items]) => {
           allItems = items || [];
           buildLabelBar(allItems);
           renderItems(allItems, '');
         })
-        .catch(() => {
-          container.innerHTML = '<p class="state-msg">Impossible de charger les flux RSS.</p>';
-        });
+        .catch(() => setMessage('Impossible de charger les flux RSS.'));
     }
 
     function showFavorites() {
-      const container = document.getElementById('news-list');
-      container.innerHTML = '<p class="state-msg">Chargement…</p>';
+      setMessage('Chargement…');
       loadFavorites().then(favs => renderItems(favs, '', true));
     }
 
@@ -299,7 +241,7 @@
         if (!r.ok) {
           // Show the reason given by the server (rights, limit reached, invalid link...)
           const d = await r.json().catch(() => ({}));
-          alert(d.error || (isFav ? "Impossible de retirer ce favori." : "Impossible d'ajouter ce favori."));
+          alert(d.error || (isFav ? 'Impossible de retirer cette trace.' : 'Impossible de garder cet article.'));
           return;
         }
         if (isFav) {
@@ -308,105 +250,44 @@
         } else {
           favoritesByLink.set(item.link, { added_by: '…' });
         }
-        btn.classList.toggle('active', !isFav);
+        btn.setAttribute('aria-pressed', String(!isFav));
+        btn.querySelector('.track-btn__text').textContent = isFav ? 'Garder' : 'Gardé';
       });
     }
 
+    function pressOnly(bar, btn) {
+      bar.querySelectorAll('.filter-btn').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+    }
+
     function buildLabelBar(items) {
-      const labels = [...new Set(items.flatMap(i => i.labels))].sort();
+      const labels = [...new Set(items.flatMap(i => i.labels || []))].sort();
       const group = document.getElementById('label-group');
       const bar = document.getElementById('label-bar');
       bar.innerHTML = '';
-
-      if (labels.length === 0) { group.style.display = 'none'; return; }
-
-      group.style.display = '';
-      const all = document.createElement('button');
-      all.className = 'filter-btn active';
-      all.dataset.label = '';
-      all.textContent = 'Tous';
-      bar.appendChild(all);
-
-      labels.forEach(label => {
+      group.hidden = labels.length === 0;
+      ['', ...labels].forEach(label => {
         const btn = document.createElement('button');
+        btn.type = 'button';
         btn.className = 'filter-btn';
         btn.dataset.label = label;
-        btn.textContent = label;
+        btn.setAttribute('aria-pressed', String(label === ''));
+        btn.textContent = label || 'Tous';
         bar.appendChild(btn);
       });
     }
 
-    const STAR_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
-
-    function renderItems(items, label, isFavoritesView) {
-      const container = document.getElementById('news-list');
-      const filtered = label ? items.filter(i => i.labels.includes(label)) : items;
-
-      if (filtered.length === 0) {
-        container.innerHTML = `<p class="state-msg">${isFavoritesView ? 'Aucun favori pour le moment.' : 'Aucun article pour ce filtre.'}</p>`;
-        return;
-      }
-
-      container.innerHTML = '';
-      filtered.forEach(item => {
-        const card = document.createElement('div');
-        card.className = 'news-card';
-        const date = item.pub_date ? formatDate(item.pub_date) : '';
-        const labelBadges = item.labels.map(l => `<span class="news-label">${escHtml(l)}</span>`).join('');
-        const isFav = isFavoritesView || favoritesByLink.has(item.link);
-        card.innerHTML = `
-          <div class="news-meta">
-            <span class="news-source">${escHtml(item.source)}</span>
-            ${labelBadges}
-            ${date ? `<span class="news-date">${date}</span>` : ''}
-            <button class="news-fav-btn${isFav ? ' active' : ''}" type="button" aria-label="Basculer favori">${STAR_ICON}</button>
-          </div>
-          <a class="news-title" href="${escHtml(item.link)}" target="_blank" rel="noopener noreferrer">
-            ${escHtml(item.title)}
-          </a>
-          ${isFavoritesView ? `<p class="news-added-by">Ajouté par ${escHtml(item.added_by)}</p>` : ''}`;
-        card.querySelector('.news-fav-btn').addEventListener('click', () => toggleFavorite(item, card.querySelector('.news-fav-btn')));
-        container.appendChild(card);
-      });
+    // Groups articles by how recent they are
+    function periodOf(dateStr) {
+      const d = dateStr ? new Date(dateStr) : null;
+      if (!d || isNaN(d)) return 'Sans date';
+      const now = new Date();
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const days = (startOfToday - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000;
+      if (days <= 0) return "Aujourd'hui";
+      if (days < 7) return 'Cette semaine';
+      if (days < 31) return 'Ce mois-ci';
+      return 'Plus ancien';
     }
-
-    document.getElementById('view-bar').addEventListener('click', e => {
-      const btn = e.target.closest('.filter-btn');
-      if (!btn) return;
-      document.querySelectorAll('#view-bar .filter-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      viewMode = btn.dataset.view;
-
-      const sourceGroup = document.getElementById('source-group');
-      const labelGroup = document.getElementById('label-group');
-      if (viewMode === 'favorites') {
-        sourceGroup.style.display = 'none';
-        labelGroup.style.display = 'none';
-        showFavorites();
-      } else {
-        sourceGroup.style.display = '';
-        loadFeeds(activeSource);
-      }
-    });
-
-    document.getElementById('source-bar').addEventListener('click', e => {
-      const btn = e.target.closest('.filter-btn');
-      if (!btn) return;
-      document.querySelectorAll('#source-bar .filter-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      loadFeeds(btn.dataset.source);
-    });
-
-    document.getElementById('label-bar').addEventListener('click', e => {
-      const btn = e.target.closest('.filter-btn');
-      if (!btn) return;
-      document.querySelectorAll('#label-bar .filter-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      activeLabel = btn.dataset.label;
-      renderItems(allItems, activeLabel);
-    });
-
-    loadFeeds('');
 
     function formatDate(str) {
       const d = new Date(str);
@@ -414,9 +295,83 @@
       return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
     }
 
-    function escHtml(s) {
-      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    function entryHtml(item, isFavoritesView) {
+      const dateStr = isFavoritesView ? item.added_at : item.pub_date;
+      const date = dateStr ? formatDate(dateStr) : '';
+      const kept = isFavoritesView || favoritesByLink.has(item.link);
+      const tags = (item.labels || []).map(l => `<span class="entry__tag">${escHtml(l)}</span>`).join('');
+      return `
+        <li class="entry">
+          <div class="entry__meta">
+            <span class="entry__source">${escHtml(item.source)}</span>
+            ${tags}
+            ${date ? `<span>${isFavoritesView ? 'gardé le ' : ''}${escHtml(date)}</span>` : ''}
+          </div>
+          <a class="entry__title" href="${escHtml(item.link)}" target="_blank" rel="noopener noreferrer">
+            ${escHtml(item.title)}<span class="sr-only"> (nouvel onglet)</span>
+          </a>
+          <div class="entry__foot">
+            <button type="button" class="track-btn" aria-pressed="${kept}" aria-label="Garder l'article : ${escHtml(item.title)}">
+              ${TRACK_ICON}<span class="track-btn__text">${kept ? 'Gardé' : 'Garder'}</span>
+            </button>
+            ${isFavoritesView ? `<span class="entry__by">Trace laissée par ${escHtml(item.added_by)}</span>` : ''}
+          </div>
+        </li>`;
     }
+
+    function renderItems(items, label, isFavoritesView) {
+      const filtered = label ? items.filter(i => (i.labels || []).includes(label)) : items;
+      if (filtered.length === 0) {
+        setMessage(isFavoritesView ? "Aucune trace pour le moment : garde un article pour le retrouver ici." : 'Aucun article pour ce filtre.');
+        return;
+      }
+      const groups = new Map();
+      filtered.forEach(item => {
+        const p = periodOf(isFavoritesView ? item.added_at : item.pub_date);
+        if (!groups.has(p)) groups.set(p, []);
+        groups.get(p).push(item);
+      });
+      list.innerHTML = [...groups].map(([period, entries], i) => `
+        <section class="period" aria-labelledby="period-${i}">
+          <h3 class="label period__title" id="period-${i}">${escHtml(period)}</h3>
+          <ol class="feed">${entries.map(e => entryHtml(e, isFavoritesView)).join('')}</ol>
+        </section>`).join('');
+      // Wire the buttons to their article (same order as the rendered entries)
+      const flat = [...groups.values()].flat();
+      list.querySelectorAll('.track-btn').forEach((btn, i) => {
+        btn.addEventListener('click', () => toggleFavorite(flat[i], btn));
+      });
+      list.setAttribute('aria-busy', 'false');
+      status.textContent = filtered.length > 1 ? `${filtered.length} articles` : '1 article';
+    }
+
+    document.getElementById('view-bar').addEventListener('click', e => {
+      const btn = e.target.closest('.filter-btn');
+      if (!btn) return;
+      pressOnly(e.currentTarget, btn);
+      viewMode = btn.dataset.view;
+      const favorites = viewMode === 'favorites';
+      document.getElementById('source-group').hidden = favorites;
+      if (favorites) { document.getElementById('label-group').hidden = true; showFavorites(); }
+      else loadFeeds(activeSource);
+    });
+
+    document.getElementById('source-bar').addEventListener('click', e => {
+      const btn = e.target.closest('.filter-btn');
+      if (!btn) return;
+      pressOnly(e.currentTarget, btn);
+      loadFeeds(btn.dataset.source);
+    });
+
+    document.getElementById('label-bar').addEventListener('click', e => {
+      const btn = e.target.closest('.filter-btn');
+      if (!btn) return;
+      pressOnly(e.currentTarget, btn);
+      activeLabel = btn.dataset.label;
+      renderItems(allItems, activeLabel);
+    });
+
+    loadFeeds('');
   </script>
   <script src="/js/recovery-notice.js"></script>
 </body>

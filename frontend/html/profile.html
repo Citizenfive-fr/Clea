@@ -4,54 +4,91 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mon profil — Cléa</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/main.css">
   <style>
-    .page-wrap { max-width: 480px; margin: 0 auto; padding: 3rem 1.5rem; }
-    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; }
-    .page-title { font-size: 1.5rem; font-weight: 700; }
-    .back-link { color: var(--muted-fg); font-size: 0.875rem; display: flex; align-items: center; gap: 0.375rem; }
-    .back-link:hover { color: var(--fg); }
-    .info-block { margin-bottom: 2rem; padding: 1.25rem; border-radius: 10px; background: oklch(0.20 0.015 240); border: 1px solid var(--border); }
-    .info-label { font-size: 0.75rem; color: var(--muted-fg); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.375rem; }
-    .info-value { font-size: 0.95rem; font-weight: 500; }
-    .section-title { font-size: 1rem; font-weight: 600; margin-bottom: 1.25rem; }
-    .section-divider { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+    /* Content column + "On this page" summary on the right (hidden on narrow screens) */
+    .profile { display: grid; grid-template-columns: minmax(0, 1fr) 11rem; gap: 3rem; align-items: start; }
+    .profile__content { width: 100%; max-width: 58rem; margin-inline: auto; }
+    .page-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.75rem; }
+    .page-title { font-size: clamp(1.5rem, 3vw, 1.875rem); font-weight: 600; letter-spacing: -0.03em; }
+    .page-head__links { display: flex; gap: 0.5rem; }
+    .page-head__links a:focus-visible { outline: 2px solid var(--brand-cyan); outline-offset: 2px; }
+    .block {
+      margin-bottom: 1.5rem; padding: 0.5rem 1.75rem; border-radius: 1.25rem;
+      background: var(--frost-surface);
+      box-shadow: inset 0 0 0 1px var(--frost-line), 0 20px 40px -28px oklch(0 0 0 / 60%);
+      scroll-margin-top: 2rem;
+    }
+    .block__title { font-size: 1.125rem; font-weight: 600; padding: 1.25rem 0 0.25rem; }
+
+    /* One setting per row: name and help on the left, the control on the right */
+    .row {
+      display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 0.75rem 2.5rem;
+      align-items: center;
+      padding: 1.5rem 0; border-top: 1px solid var(--frost-line);
+    }
+    .block__title + .row { border-top: 0; }
+    .row__label { display: block; font-size: 0.9375rem; font-weight: 600; }
+    .row__desc { margin-top: 0.375rem; font-size: 0.8125rem; line-height: 1.55; color: var(--soft-fg); max-width: 34ch; }
+    /* Rows holding a tall form keep their label at the top */
+    .row--top { align-items: start; }
+    .row__value { font-size: 0.95rem; font-weight: 500; overflow-wrap: anywhere; padding-top: 0.05rem; }
+    .row__body form .btn--primary { margin-top: 0.5rem; }
+    .inline-form { display: flex; gap: 0.5rem; }
+    .inline-form .input { flex: 1; min-width: 0; }
+    .inline-form .btn--primary { margin-top: 0; height: auto; }
+    .status-line { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .status-line ~ * { margin-top: 1rem; }
+    .status-line ~ .msg:not(.visible) { margin-top: 0; }
+    .logout { display: flex; justify-content: flex-end; }
+    .logout-btn { color: var(--danger-fg); }
+    @media (max-width: 1000px) {
+      .row { grid-template-columns: minmax(0, 1fr); }
+      .row__desc { max-width: none; }
+    }
+    .toc { position: sticky; top: 2.5rem; }
+    .toc__label { margin-bottom: 0.75rem; }
+    .toc ul { list-style: none; display: flex; flex-direction: column; gap: 0.15rem; border-left: 1px solid var(--frost-line); }
+    .toc a {
+      display: block; padding: 0.35rem 0.875rem; margin-left: -1px;
+      border-left: 2px solid transparent;
+      font-size: 0.875rem; color: var(--soft-fg); transition: color 0.2s, border-color 0.2s;
+    }
+    .toc a:hover { color: var(--fg); }
+    .toc a[aria-current] { color: var(--fg); border-left-color: var(--brand-teal); }
+    .toc a:focus-visible { outline: 2px solid var(--brand-cyan); outline-offset: 2px; border-radius: 0.25rem; }
+    @media (max-width: 1100px) {
+      .profile { grid-template-columns: minmax(0, 1fr); }
+      .toc { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { .toc a { transition: none; } }
     .field { display: flex; flex-direction: column; gap: 0.375rem; margin-bottom: 1rem; }
     .field label { font-size: 0.875rem; font-weight: 500; }
-    .field input {
-      background: oklch(0.14 0.015 240); border: 1px solid var(--border);
+    .field input, .input {
+      background: var(--field-bg); border: 1px solid var(--border);
       border-radius: 8px; padding: 0.625rem 0.875rem;
       font-size: 0.9rem; font-family: inherit; color: var(--fg); outline: none;
     }
-    .field input:focus { border-color: var(--primary); }
-    .field input::placeholder { color: var(--muted-fg); }
+    .field input:focus, .input:focus { border-color: var(--primary); outline: 2px solid var(--primary); outline-offset: 1px; }
+    .field input::placeholder, .input::placeholder { color: var(--muted-fg); }
     .hint { font-size: 0.75rem; color: var(--muted-fg); }
-    .submit-btn { width: 100%; margin-top: 0.5rem; padding: 0.75rem; font-size: 0.95rem; font-weight: 600; }
     .msg { border-radius: 8px; padding: 0.625rem 0.875rem; font-size: 0.85rem; margin-top: 1rem; display: none; }
-    .msg.error { background: oklch(0.25 0.06 15/60%); border: 1px solid oklch(0.45 0.12 15/60%); color: oklch(0.85 0.08 15); }
-    .msg.success { background: oklch(0.20 0.06 155/60%); border: 1px solid oklch(0.45 0.1 155/60%); color: oklch(0.85 0.08 155); }
+    .msg.error { background: var(--danger-bg); border: 1px solid var(--danger-line); color: var(--danger-fg); }
+    .msg.success { background: var(--success-bg); border: 1px solid var(--success-line); color: var(--success-fg); }
     .msg.visible { display: block; }
 
     /* 2FA section */
-    .twofa-status {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 1.25rem; border-radius: 10px;
-      background: oklch(0.20 0.015 240); border: 1px solid var(--border);
-      margin-bottom: 1.25rem;
-    }
     .status-badge {
       display: inline-flex; align-items: center; gap: 0.4rem;
       font-size: 0.85rem; font-weight: 600;
     }
-    .status-badge.on  { color: oklch(0.75 0.14 155); }
+    .status-badge.on  { color: var(--success-fg); }
     .status-badge.off { color: var(--muted-fg); }
     .status-dot { width: 8px; height: 8px; border-radius: 50%; }
-    .status-dot.on  { background: oklch(0.75 0.14 155); }
+    .status-dot.on  { background: var(--success-fg); }
     .status-dot.off { background: var(--muted-fg); }
     .twofa-setup-panel {
-      background: oklch(0.18 0.015 240); border: 1px solid var(--border);
+      background: color-mix(in oklch, var(--bg) 45%, transparent); border: 1px solid var(--frost-line);
       border-radius: 10px; padding: 1.5rem; margin-bottom: 1.25rem;
     }
     .qr-wrap {
@@ -60,8 +97,8 @@
     }
     .qr-wrap img { border-radius: 8px; }
     .secret-code {
-      font-family: monospace; font-size: 0.85rem; letter-spacing: 0.08em;
-      background: oklch(0.13 0.01 240); border: 1px solid var(--border);
+      font-family: var(--font-mono); font-size: 0.85rem; letter-spacing: 0.08em;
+      background: var(--field-bg); border: 1px solid var(--border);
       border-radius: 6px; padding: 0.5rem 0.75rem;
       color: var(--brand-teal); word-break: break-all; text-align: center;
     }
@@ -75,9 +112,9 @@
     .field-label { display: block; font-size: 0.875rem; font-weight: 500; }
     .recovery-key {
       width: 100%; box-sizing: border-box; resize: none;
-      background: oklch(0.14 0.015 240); border: 1px solid var(--border);
+      background: var(--field-bg); border: 1px solid var(--border);
       border-radius: 8px; padding: 0.75rem;
-      font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+      font-family: var(--font-mono);
       font-size: 0.9rem; line-height: 1.6; color: var(--fg); word-break: break-all;
       margin: 0.375rem 0 0.75rem;
     }
@@ -88,7 +125,7 @@
     .btn:disabled { opacity: 0.55; cursor: not-allowed; }
     .keys-explainer {
       font-size: 0.85rem; line-height: 1.6;
-      background: oklch(0.16 0.015 240); border: 1px solid var(--border);
+      background: var(--frost-surface); border: 1px solid var(--frost-line);
       border-radius: 10px; padding: 1rem 1.125rem; margin: 0.5rem 0 1.25rem;
     }
     .keys-explainer p { margin: 0 0 0.625rem; }
@@ -104,9 +141,9 @@
       position: absolute; top: 0.5rem; right: 0.5rem;
       min-width: 2rem; min-height: 2rem; border-radius: 6px; cursor: pointer;
       background: transparent; color: inherit; font-size: 1.2rem; line-height: 1;
-      border: 1px solid oklch(0.45 0.12 15/60%);
+      border: 1px solid var(--danger-line);
     }
-    .host-hint__close:hover { background: oklch(0.30 0.07 15/60%); }
+    .host-hint__close:hover { background: var(--danger-line); }
     .host-hint__close:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
     .help-details { font-size: 0.85rem; line-height: 1.55; margin-bottom: 0.5rem; }
     .help-details summary { cursor: pointer; font-weight: 500; padding: 0.25rem 0; }
@@ -118,6 +155,7 @@
   </style>
 </head>
 <body>
+  <a href="#main" class="sr-only sr-only--focusable">Aller au contenu</a>
   <div class="page">
     <div class="animated-bg" aria-hidden="true">
       <div class="orb orb--cyan"></div>
@@ -125,240 +163,264 @@
       <div class="orb orb--teal"></div>
     </div>
 
-    <div class="page-wrap">
-      <div class="page-header">
-        <h1 class="page-title">Mon profil</h1>
-        <a href="/" class="back-link">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="m12 5-7 7 7 7"/></svg>
-          Accueil
-        </a>
-      </div>
-
-      <div class="info-block">
-        <div class="info-label">Email</div>
-        <div class="info-value" id="user-email">…</div>
-      </div>
-      <div class="info-block">
-        <div class="info-label">Rôle</div>
-        <div class="info-value" id="user-role">…</div>
-      </div>
-
-      <!-- Username -->
-      <p class="section-title">Nom d'utilisateur</p>
-      <form id="username-form" novalidate>
-        <div class="field">
-          <input id="username-input" type="text" placeholder="Ton nom d'utilisateur" maxlength="50" autocomplete="username">
-          <span class="hint">Affiché dans la navigation. 50 caractères max.</span>
+    <main class="main" id="main">
+    <div class="profile">
+      <div class="profile__content">
+        <!-- No app sidebar on this dense page: two links next to the title instead -->
+        <div class="page-head">
+          <h1 class="page-title">Mon profil</h1>
+          <nav class="page-head__links" aria-label="Retour">
+            <a href="/" class="btn btn--ghost">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 5-7 7 7 7"/></svg>
+              Accueil
+            </a>
+            <a href="/app" class="btn btn--primary">Tableau de bord</a>
+          </nav>
         </div>
-        <div class="msg error" id="username-error" role="alert"></div>
-        <div class="msg success" id="username-success" role="status"></div>
-        <button type="submit" class="btn submit-btn">Mettre à jour</button>
-      </form>
 
-      <hr class="section-divider">
+        <section class="block" id="compte" aria-labelledby="compte-title">
+          <h2 class="block__title" id="compte-title">Compte</h2>
 
-      <!-- 2FA section -->
-      <p class="section-title">Authentification à deux facteurs (2FA)</p>
-
-      <div class="twofa-status">
-        <div>
-          <div class="info-label" style="margin-bottom:0.25rem">Statut</div>
-          <div class="status-badge off" id="twofa-badge">
-            <span class="status-dot off" id="twofa-dot"></span>
-            <span id="twofa-badge-text">Non activée</span>
+          <div class="row">
+            <div class="row__head"><p class="row__label">Email</p></div>
+            <div class="row__body"><p class="row__value" id="user-email">…</p></div>
           </div>
-        </div>
-        <div id="twofa-actions">
-          <button class="btn btn--outline" id="twofa-enable-btn" style="display:none" data-action="startSetup">Activer</button>
-          <button class="btn btn--ghost" id="twofa-disable-btn" style="display:none" data-action="showDisableForm">Désactiver</button>
-        </div>
-      </div>
 
-      <!-- Setup panel (QR + confirm) -->
-      <div class="twofa-setup-panel" id="twofa-setup-panel" style="display:none">
-        <p style="font-size:0.9rem;font-weight:600;margin-bottom:0.5rem">Configurer l'application d'authentification</p>
-        <p style="font-size:0.8rem;color:var(--muted-fg);margin-bottom:0">Scanne ce QR code avec Google Authenticator, Authy ou Bitwarden.</p>
-        <div class="qr-wrap">
-          <img id="twofa-qr" src="" alt="QR Code" width="180" height="180">
-          <div>
-            <p class="secret-hint" style="margin-bottom:0.375rem">Ou entre-le à la main :</p>
-            <div class="secret-code" id="twofa-secret"></div>
+          <div class="row">
+            <div class="row__head"><p class="row__label">Rôle</p></div>
+            <div class="row__body"><p class="row__value" id="user-role">…</p></div>
           </div>
-        </div>
-        <p style="font-size:0.85rem;margin-bottom:0.5rem">Entre le code affiché pour confirmer :</p>
-        <input id="twofa-confirm-code" type="text" inputmode="numeric" pattern="[0-9]{6}"
-               placeholder="000000" maxlength="6" autocomplete="one-time-code"
-               style="width:100%;box-sizing:border-box;background:oklch(0.14 0.015 240);border:1px solid var(--border);border-radius:8px;padding:0.625rem 0.875rem;font-size:1.1rem;font-family:inherit;color:var(--fg);outline:none;text-align:center;letter-spacing:0.4em;">
-        <button class="btn" style="width:100%;margin-top:0.75rem" data-action="confirmSetup">Confirmer</button>
-        <div class="msg error" id="setup-error" role="alert"></div>
-        <button class="btn btn--ghost" style="width:100%;margin-top:0.75rem" data-action="cancelSetup">Annuler</button>
-      </div>
 
-      <!-- Disable confirmation -->
-      <div class="twofa-setup-panel" id="twofa-disable-panel" style="display:none">
-        <p style="font-size:0.9rem;font-weight:600;margin-bottom:0.75rem">Désactiver la 2FA</p>
-        <div class="field">
-          <label for="disable-password">Mot de passe actuel</label>
-          <input id="disable-password" type="password" autocomplete="current-password">
-        </div>
-        <div class="msg error" id="disable-error" role="alert"></div>
-        <button class="btn" style="width:100%;margin-top:0.25rem" data-action="confirmDisable">Confirmer la désactivation</button>
-        <button class="btn btn--ghost" style="width:100%;margin-top:0.5rem" data-action="cancelDisable">Annuler</button>
-      </div>
-
-      <div class="msg success" id="twofa-success" role="status"></div>
-
-      <hr class="section-divider">
-
-      <!-- Recovery key (owner only) -->
-      <section id="recovery-section" hidden aria-labelledby="recovery-title">
-        <h2 class="section-title" id="recovery-title">Clé de secours</h2>
-
-        <p class="recovery-text">
-          Elle permet de récupérer les données chiffrées de l'entreprise si la clé maîtresse
-          du serveur est perdue. Cléa ne la garde pas : seule ta copie existe.
-        </p>
-
-        <div class="twofa-status">
-          <div>
-            <div class="info-label" style="margin-bottom:0.25rem">Statut</div>
-            <div class="status-badge on">
-              <span class="status-dot on" aria-hidden="true"></span>
-              <span>En place, <span id="recovery-date">…</span></span>
+          <div class="row">
+            <div class="row__head">
+              <label class="row__label" for="username-input">Nom d'utilisateur</label>
+              <p class="row__desc" id="username-hint">Affiché dans la navigation. 50 caractères max.</p>
+            </div>
+            <div class="row__body">
+              <form id="username-form" class="inline-form" novalidate>
+                <input id="username-input" class="input" type="text" maxlength="50" autocomplete="username" aria-describedby="username-hint">
+                <button type="submit" class="btn btn--primary">Mettre à jour</button>
+              </form>
+              <div class="msg error" id="username-error" role="alert"></div>
+              <div class="msg success" id="username-success" role="status"></div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div class="msg error host-hint" id="recovery-host-hint" role="note">
-          <p>
-            Ta clé de secours a été recréée par la personne qui gère ou maintient le serveur.
-            Ton ancienne clé ne marche plus : demande-lui la nouvelle si elle ne te l'a pas encore donnée.
-            Si tu n'étais pas au courant, contacte-la. Une fois que tu l'as, tu peux la remplacer avec
-            le bouton «&nbsp;Remplacer ma clé&nbsp;», pour être la seule personne à la connaître.
-          </p>
-          <button type="button" class="host-hint__close" data-action="dismissNotice"
-                  aria-label="Fermer cet avertissement">×</button>
-        </div>
+        <section class="block" id="securite" aria-labelledby="securite-title">
+          <h2 class="block__title" id="securite-title">Sécurité</h2>
 
-        <div class="recovery-actions">
-          <button type="button" class="btn btn--outline" data-action="showVerifyForm">Vérifier ma clé</button>
-          <button type="button" class="btn btn--ghost" data-action="showReplaceForm">Remplacer ma clé</button>
-        </div>
-
-        <!-- Check the key (changes nothing) -->
-        <div class="twofa-setup-panel" id="verify-panel" hidden>
-          <h3 class="panel-title">Vérifier ma clé de secours</h3>
-          <p class="recovery-text">Colle ta clé pour vérifier que c'est bien la bonne. Rien n'est modifié.</p>
-          <label for="verify-key" class="field-label">Clé de secours</label>
-          <textarea id="verify-key" class="recovery-key" rows="3" spellcheck="false"
-                    autocomplete="off" autocapitalize="off" placeholder="CLEA-RECOVERY-KEY-…"></textarea>
-          <div class="msg error" id="verify-error" role="alert"></div>
-          <div class="msg success" id="verify-success" role="status"></div>
-          <button type="button" class="btn" style="width:100%;margin-top:0.75rem" data-action="confirmVerify">Vérifier</button>
-          <button type="button" class="btn btn--ghost" style="width:100%;margin-top:0.5rem" data-action="cancelVerify">Fermer</button>
-        </div>
-
-        <!-- Replace the key: needs the current key and the password -->
-        <div class="twofa-setup-panel" id="replace-panel" hidden>
-          <h3 class="panel-title">Remplacer ma clé de secours</h3>
-          <p class="recovery-text">
-            Une nouvelle clé sera créée et l'actuelle ne marchera plus. Il faut ta clé actuelle
-            et ton mot de passe. Si tu as perdu ta clé, vois « Que faire si… » plus bas.
-          </p>
-          <label for="replace-key" class="field-label">Clé de secours actuelle</label>
-          <textarea id="replace-key" class="recovery-key" rows="3" spellcheck="false"
-                    autocomplete="off" autocapitalize="off" placeholder="CLEA-RECOVERY-KEY-…"></textarea>
-          <div class="field">
-            <label for="replace-password">Mot de passe</label>
-            <input id="replace-password" type="password" autocomplete="current-password">
+          <div class="row row--top">
+            <div class="row__head">
+              <h3 class="row__label">Mot de passe</h3>
+              <p class="row__desc">12 caractères minimum. Tu seras déconnecté(e) après le changement.</p>
+            </div>
+            <div class="row__body">
+              <form id="pw-form" novalidate>
+                <div class="field">
+                  <label for="current_password">Mot de passe actuel</label>
+                  <input id="current_password" class="input" type="password" autocomplete="current-password" required>
+                </div>
+                <div class="field">
+                  <label for="new_password">Nouveau mot de passe</label>
+                  <input id="new_password" class="input" type="password" autocomplete="new-password" maxlength="128" required>
+                </div>
+                <div class="field">
+                  <label for="new_password_confirm">Confirmer le nouveau mot de passe</label>
+                  <input id="new_password_confirm" class="input" type="password" autocomplete="new-password" maxlength="128" required>
+                </div>
+                <div class="msg error" id="pw-error" role="alert"></div>
+                <div class="msg success" id="pw-success" role="status"></div>
+                <button type="submit" class="btn btn--primary">Changer le mot de passe</button>
+              </form>
+            </div>
           </div>
-          <div class="msg error" id="replace-error" role="alert"></div>
-          <button type="button" class="btn" style="width:100%;margin-top:0.75rem" data-action="confirmReplace">Remplacer</button>
-          <button type="button" class="btn btn--ghost" style="width:100%;margin-top:0.5rem" data-action="cancelReplace">Annuler</button>
+
+          <div class="row">
+            <div class="row__head">
+              <h3 class="row__label">Double authentification (2FA)</h3>
+              <p class="row__desc">En plus du mot de passe, un code à 6 chiffres donné par une application sur ton téléphone.</p>
+            </div>
+            <div class="row__body">
+              <div class="status-line">
+                <div class="status-badge off" id="twofa-badge">
+                  <span class="status-dot off" id="twofa-dot" aria-hidden="true"></span>
+                  <span id="twofa-badge-text">Non activée</span>
+                </div>
+                <div id="twofa-actions">
+                  <button class="btn btn--outline" id="twofa-enable-btn" style="display:none" data-action="startSetup">Activer</button>
+                  <button class="btn btn--ghost" id="twofa-disable-btn" style="display:none" data-action="showDisableForm">Désactiver</button>
+                </div>
+              </div>
+
+              <!-- Setup panel (QR + confirm) -->
+              <div class="twofa-setup-panel" id="twofa-setup-panel" style="display:none">
+                <p style="font-size:0.9rem;font-weight:600;margin-bottom:0.5rem">Configurer l'application d'authentification</p>
+                <p style="font-size:0.8rem;color:var(--muted-fg);margin-bottom:0">Scanne ce QR code avec Google Authenticator, Authy ou Bitwarden.</p>
+                <div class="qr-wrap">
+                  <img id="twofa-qr" src="" alt="QR Code" width="180" height="180">
+                  <div>
+                    <p class="secret-hint" style="margin-bottom:0.375rem">Ou entre-le à la main :</p>
+                    <div class="secret-code" id="twofa-secret"></div>
+                  </div>
+                </div>
+                <p style="font-size:0.85rem;margin-bottom:0.5rem">Entre le code affiché pour confirmer :</p>
+                <input id="twofa-confirm-code" type="text" inputmode="numeric" pattern="[0-9]{6}"
+                       placeholder="000000" maxlength="6" autocomplete="one-time-code"
+                       style="width:100%;box-sizing:border-box;background:var(--field-bg);border:1px solid var(--border);border-radius:8px;padding:0.625rem 0.875rem;font-size:1.1rem;font-family:inherit;color:var(--fg);outline:none;text-align:center;letter-spacing:0.4em;">
+                <button class="btn" style="width:100%;margin-top:0.75rem" data-action="confirmSetup">Confirmer</button>
+                <div class="msg error" id="setup-error" role="alert"></div>
+                <button class="btn btn--ghost" style="width:100%;margin-top:0.75rem" data-action="cancelSetup">Annuler</button>
+              </div>
+
+              <!-- Disable confirmation -->
+              <div class="twofa-setup-panel" id="twofa-disable-panel" style="display:none">
+                <p style="font-size:0.9rem;font-weight:600;margin-bottom:0.75rem">Désactiver la 2FA</p>
+                <div class="field">
+                  <label for="disable-password">Mot de passe actuel</label>
+                  <input id="disable-password" type="password" autocomplete="current-password">
+                </div>
+                <div class="msg error" id="disable-error" role="alert"></div>
+                <button class="btn" style="width:100%;margin-top:0.25rem" data-action="confirmDisable">Confirmer la désactivation</button>
+                <button class="btn btn--ghost" style="width:100%;margin-top:0.5rem" data-action="cancelDisable">Annuler</button>
+              </div>
+
+              <div class="msg success" id="twofa-success" role="status"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Recovery key (owner only) -->
+        <section class="block" id="recovery-section" hidden aria-labelledby="recovery-title">
+          <h2 class="block__title" id="recovery-title">Clé de secours</h2>
+
+          <div class="row row--top">
+            <div class="row__head">
+              <p class="row__label">Statut</p>
+              <p class="row__desc">
+                Elle permet de récupérer les données chiffrées de l'organisation si la clé maîtresse
+                du serveur est perdue. Cléa ne la garde pas : seule ta copie existe.
+              </p>
+            </div>
+            <div class="row__body">
+              <div class="status-line">
+                <div class="status-badge on">
+                  <span class="status-dot on" aria-hidden="true"></span>
+                  <span>En place, <span id="recovery-date">…</span></span>
+                </div>
+              </div>
+
+              <div class="msg error host-hint" id="recovery-host-hint" role="note">
+                <p>
+                  Ta clé de secours a été recréée par la personne qui gère ou maintient le serveur.
+                  Ton ancienne clé ne marche plus : demande-lui la nouvelle si elle ne te l'a pas encore donnée.
+                  Si tu n'étais pas au courant, contacte-la. Une fois que tu l'as, tu peux la remplacer avec
+                  le bouton «&nbsp;Remplacer ma clé&nbsp;», pour être la seule personne à la connaître.
+                </p>
+                <button type="button" class="host-hint__close" data-action="dismissNotice"
+                        aria-label="Fermer cet avertissement">×</button>
+              </div>
+
+              <div class="recovery-actions">
+                <button type="button" class="btn btn--outline" data-action="showVerifyForm">Vérifier ma clé</button>
+                <button type="button" class="btn btn--ghost" data-action="showReplaceForm">Remplacer ma clé</button>
+              </div>
+
+              <!-- Check the key (changes nothing) -->
+              <div class="twofa-setup-panel" id="verify-panel" hidden>
+                <h3 class="panel-title">Vérifier ma clé de secours</h3>
+                <p class="recovery-text">Colle ta clé pour vérifier que c'est bien la bonne. Rien n'est modifié.</p>
+                <label for="verify-key" class="field-label">Clé de secours</label>
+                <textarea id="verify-key" class="recovery-key" rows="3" spellcheck="false"
+                          autocomplete="off" autocapitalize="off" placeholder="CLEA-RECOVERY-KEY-…"></textarea>
+                <div class="msg error" id="verify-error" role="alert"></div>
+                <div class="msg success" id="verify-success" role="status"></div>
+                <button type="button" class="btn" style="width:100%;margin-top:0.75rem" data-action="confirmVerify">Vérifier</button>
+                <button type="button" class="btn btn--ghost" style="width:100%;margin-top:0.5rem" data-action="cancelVerify">Fermer</button>
+              </div>
+
+              <!-- Replace the key: needs the current key and the password -->
+              <div class="twofa-setup-panel" id="replace-panel" hidden>
+                <h3 class="panel-title">Remplacer ma clé de secours</h3>
+                <p class="recovery-text">
+                  Une nouvelle clé sera créée et l'actuelle ne marchera plus. Il faut ta clé actuelle
+                  et ton mot de passe. Si tu as perdu ta clé, vois « Que faire si… » plus bas.
+                </p>
+                <label for="replace-key" class="field-label">Clé de secours actuelle</label>
+                <textarea id="replace-key" class="recovery-key" rows="3" spellcheck="false"
+                          autocomplete="off" autocapitalize="off" placeholder="CLEA-RECOVERY-KEY-…"></textarea>
+                <div class="field">
+                  <label for="replace-password">Mot de passe</label>
+                  <input id="replace-password" type="password" autocomplete="current-password">
+                </div>
+                <div class="msg error" id="replace-error" role="alert"></div>
+                <button type="button" class="btn" style="width:100%;margin-top:0.75rem" data-action="confirmReplace">Remplacer</button>
+                <button type="button" class="btn btn--ghost" style="width:100%;margin-top:0.5rem" data-action="cancelReplace">Annuler</button>
+              </div>
+
+              <!-- New key, shown once -->
+              <div class="twofa-setup-panel" id="newkey-panel" hidden>
+                <h3 class="panel-title" id="newkey-title" tabindex="-1">Ta nouvelle clé de secours</h3>
+                <p class="recovery-text">
+                  L'ancienne clé ne marche plus. <strong>Celle-ci ne sera plus jamais affichée.</strong>
+                </p>
+                <p class="recovery-text" id="newkey-help">
+                  Garde-la hors de ce serveur : imprimée et rangée dans un endroit sûr.
+                  Ne la transmets à personne.
+                </p>
+                <details class="keys-explainer">
+                  <summary class="keys-explainer__title">Comment marchent les clés de Cléa ?</summary>
+                  <p>Cléa utilise un système tri-clés pour chiffrer tes données. Chaque clé a un nom qui lui est propre et un rôle unique.</p>
+                  <p><strong>La clé de l'organisation</strong> permet de chiffrer tes données sensibles qui sont stockées dans Cléa. Cette clé est directement enfermée et chiffrée par la clé maîtresse et celle de secours dans la base, personne ne peut la voir. Elle peut être ouverte avec la clé maîtresse ou celle de secours. Pour savoir en détail quelles sont les données qui sont chiffrées, tu peux consulter <a href="https://git.citizenfive.fr/Citizenfive-fr/Clea/wiki/Chiffrement" target="_blank" rel="noopener noreferrer">la page du wiki sur le chiffrement (s'ouvre dans un nouvel onglet)</a>.</p>
+                  <p><strong>La clé maîtresse</strong> est essentielle pour le bon fonctionnement quotidien de Cléa car elle permet d'ouvrir la clé de l'organisation et donc de déchiffrer le contenu chiffré. Cette clé doit être gardée par la personne qui gère et maintient le serveur où Cléa est hébergée. Cléa doit pouvoir accéder à cette clé au moment où il est nécessaire de déchiffrer le contenu. Il est conseillé de faire une copie de cette clé en dehors du serveur.</p>
+                  <p><strong>La clé de secours</strong> fait office de double de secours pour ouvrir la clé de l'organisation si tu as perdu la clé maîtresse. Il est fortement conseillé que tu gardes cette clé toi-même et que tu ne l'utilises qu'en cas de besoin dans Cléa.</p>
+                  <p>Dans le cas où la clé maîtresse et la clé de secours sont perdues, il ne sera plus possible de déchiffrer le contenu sensible.</p>
+                </details>
+                <label for="newkey" class="field-label">Nouvelle clé de secours</label>
+                <textarea id="newkey" class="recovery-key" rows="4" readonly
+                          spellcheck="false" autocomplete="off" aria-describedby="newkey-help"></textarea>
+                <button type="button" class="btn btn--outline" data-action="copyNewKey">Copier la clé</button>
+                <p id="newkey-copy-status" class="copy-status" role="status" aria-live="polite"></p>
+                <label class="recovery-check">
+                  <input type="checkbox" id="newkey-saved" aria-describedby="newkey-hint">
+                  <span>J'ai sauvegardé cette clé dans un endroit sûr</span>
+                </label>
+                <p id="newkey-hint" class="hint" style="margin-top:0.5rem">Coche la case pour terminer.</p>
+                <button type="button" class="btn" id="newkey-done" style="width:100%;margin-top:0.75rem" data-action="finishNewKey" disabled>Terminer</button>
+              </div>
+
+              <details class="help-details">
+                <summary>Que faire si…</summary>
+                <dl>
+                  <dt>Tu as perdu ta clé de secours</dt>
+                  <dd>Demande à la personne qui gère ou maintient le serveur de lancer la commande <code>clea new-recovery-key</code>. Celle-ci créera une nouvelle clé de secours et invalidera l'ancienne clé. Une fois que tu as récupéré la clé, tu peux régénérer une nouvelle clé de secours avec le bouton « Remplacer ma clé », plus haut sur cette page. Cela invalidera la clé créée par la commande <code>clea new-recovery-key</code> et tu seras la seule personne à connaître la nouvelle clé.</dd>
+                  <dt>La clé maîtresse du serveur est perdue</dt>
+                  <dd>La personne qui gère ou maintient le serveur peut remettre Cléa en marche avec une nouvelle clé maîtresse, grâce à la commande <code>clea recover</code>, mais il lui faut ta clé de secours. Ensuite, pense à lui demander la nouvelle clé de secours. Si tu veux être la seule personne à la connaître, tu peux régénérer une clé de secours avec le bouton « Remplacer ma clé », plus haut sur cette page.</dd>
+                  <dt>La personne qui gère ou maintient le serveur veut changer la clé maîtresse</dt>
+                  <dd>Elle lance <code>clea rotate-key</code>. Ta clé de secours ne change pas.</dd>
+                  <dt>Les deux clés sont perdues</dt>
+                  <dd>Les données chiffrées ne peuvent plus être récupérées.</dd>
+                </dl>
+              </details>
+            </div>
+          </div>
+        </section>
+
+        <div class="logout">
+          <button class="btn btn--ghost logout-btn" data-action="logout">Se déconnecter</button>
         </div>
-
-        <!-- New key, shown once -->
-        <div class="twofa-setup-panel" id="newkey-panel" hidden>
-          <h3 class="panel-title" id="newkey-title" tabindex="-1">Ta nouvelle clé de secours</h3>
-          <p class="recovery-text">
-            L'ancienne clé ne marche plus. <strong>Celle-ci ne sera plus jamais affichée.</strong>
-          </p>
-          <p class="recovery-text" id="newkey-help">
-            Garde-la hors de ce serveur : imprimée et rangée dans un endroit sûr.
-            Ne la transmets à personne.
-          </p>
-          <details class="keys-explainer">
-            <summary class="keys-explainer__title">Comment marchent les clés de Cléa ?</summary>
-            <p>Cléa utilise un système tri-clés pour chiffrer tes données. Chaque clé a un nom qui lui est propre et un rôle unique.</p>
-            <p><strong>La clé de l'organisation</strong> permet de chiffrer tes données sensibles qui sont stockées dans Cléa. Cette clé est directement enfermée et chiffrée par la clé maîtresse et celle de secours dans la base, personne ne peut la voir. Elle peut être ouverte avec la clé maîtresse ou celle de secours. Pour savoir en détail quelles sont les données qui sont chiffrées, tu peux consulter <a href="https://git.citizenfive.fr/Citizenfive-fr/Clea/wiki/Chiffrement" target="_blank" rel="noopener noreferrer">la page du wiki sur le chiffrement (s'ouvre dans un nouvel onglet)</a>.</p>
-            <p><strong>La clé maîtresse</strong> est essentielle pour le bon fonctionnement quotidien de Cléa car elle permet d'ouvrir la clé de l'organisation et donc de déchiffrer le contenu chiffré. Cette clé doit être gardée par la personne qui gère et maintient le serveur où Cléa est hébergée. Cléa doit pouvoir accéder à cette clé au moment où il est nécessaire de déchiffrer le contenu. Il est conseillé de faire une copie de cette clé en dehors du serveur.</p>
-            <p><strong>La clé de secours</strong> fait office de double de secours pour ouvrir la clé de l'organisation si tu as perdu la clé maîtresse. Il est fortement conseillé que tu gardes cette clé toi-même et que tu ne l'utilises qu'en cas de besoin dans Cléa.</p>
-            <p>Dans le cas où la clé maîtresse et la clé de secours sont perdues, il ne sera plus possible de déchiffrer le contenu sensible.</p>
-          </details>
-          <label for="newkey" class="field-label">Nouvelle clé de secours</label>
-          <textarea id="newkey" class="recovery-key" rows="4" readonly
-                    spellcheck="false" autocomplete="off" aria-describedby="newkey-help"></textarea>
-          <button type="button" class="btn btn--outline" data-action="copyNewKey">Copier la clé</button>
-          <p id="newkey-copy-status" class="copy-status" role="status" aria-live="polite"></p>
-          <label class="recovery-check">
-            <input type="checkbox" id="newkey-saved" aria-describedby="newkey-hint">
-            <span>J'ai sauvegardé cette clé dans un endroit sûr</span>
-          </label>
-          <p id="newkey-hint" class="hint" style="margin-top:0.5rem">Coche la case pour terminer.</p>
-          <button type="button" class="btn" id="newkey-done" style="width:100%;margin-top:0.75rem" data-action="finishNewKey" disabled>Terminer</button>
-        </div>
-
-        <details class="help-details">
-          <summary>Que faire si…</summary>
-          <dl>
-            <dt>Tu as perdu ta clé de secours</dt>
-            <dd>Demande à la personne qui gère ou maintient le serveur de lancer la commande <code>clea new-recovery-key</code>. Celle-ci créera une nouvelle clé de secours et invalidera l'ancienne clé. Une fois que tu as récupéré la clé, tu peux régénérer une nouvelle clé de secours avec le bouton « Remplacer ma clé », plus haut sur cette page. Cela invalidera la clé créée par la commande <code>clea new-recovery-key</code> et tu seras la seule personne à connaître la nouvelle clé.</dd>
-            <dt>La clé maîtresse du serveur est perdue</dt>
-            <dd>La personne qui gère ou maintient le serveur peut remettre Cléa en marche avec une nouvelle clé maîtresse, grâce à la commande <code>clea recover</code>, mais il lui faut ta clé de secours. Ensuite, pense à lui demander la nouvelle clé de secours. Si tu veux être la seule personne à la connaître, tu peux régénérer une clé de secours avec le bouton « Remplacer ma clé », plus haut sur cette page.</dd>
-            <dt>La personne qui gère ou maintient le serveur veut changer la clé maîtresse</dt>
-            <dd>Elle lance <code>clea rotate-key</code>. Ta clé de secours ne change pas.</dd>
-            <dt>Les deux clés sont perdues</dt>
-            <dd>Les données chiffrées ne peuvent plus être récupérées.</dd>
-          </dl>
-        </details>
-
-        <hr class="section-divider">
-      </section>
-
-      <!-- Admin: team management -->
-      <div id="admin-section" style="display:none">
-        <p class="section-title">Administration de l'équipe</p>
-        <a href="/team" class="btn btn--outline" style="display:inline-flex;align-items:center;gap:0.5rem">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Gérer l'équipe
-        </a>
-        <hr class="section-divider">
       </div>
 
-      <!-- Password change -->
-      <p class="section-title">Changer le mot de passe</p>
-      <form id="pw-form" novalidate>
-        <div class="field">
-          <label for="current_password">Mot de passe actuel</label>
-          <input id="current_password" type="password" autocomplete="current-password" required>
-        </div>
-        <div class="field">
-          <label for="new_password">Nouveau mot de passe</label>
-          <input id="new_password" type="password" placeholder="12 caractères minimum" autocomplete="new-password" maxlength="128" required>
-          <span class="hint">12 caractères minimum.</span>
-        </div>
-        <div class="field">
-          <label for="new_password_confirm">Confirmer</label>
-          <input id="new_password_confirm" type="password" autocomplete="new-password" maxlength="128" required>
-        </div>
-        <div class="msg error" id="pw-error" role="alert"></div>
-        <div class="msg success" id="pw-success" role="status"></div>
-        <button type="submit" class="btn submit-btn">Mettre à jour</button>
-      </form>
-
-      <hr class="section-divider">
-      <button class="btn btn--ghost" style="width:100%;color:oklch(0.7 0.1 15)" data-action="logout">Se déconnecter</button>
+      <nav class="toc" aria-label="Sur cette page">
+        <p class="label toc__label" aria-hidden="true">Sur cette page</p>
+        <ul>
+          <li><a href="#compte">Compte</a></li>
+          <li><a href="#securite">Sécurité</a></li>
+          <li id="toc-recovery" hidden><a href="#recovery-section">Clé de secours</a></li>
+        </ul>
+      </nav>
     </div>
+    </main>
   </div>
 
   <script>
@@ -374,11 +436,11 @@
       .then(r => { if (!r.ok) window.location.href = '/login'; return r.json(); })
       .then(u => {
         document.getElementById('user-email').textContent = u.email;
-        document.getElementById('user-role').textContent = u.role;
+        document.getElementById('user-role').textContent =
+          { owner: 'Propriétaire', admin: 'Administrateur', member: 'Membre' }[u.role] || u.role;
         if (u.username) document.getElementById('username-input').value = u.username;
         totpEnabled = u.totp_enabled;
         renderTotpStatus();
-        if (u.role !== 'member') document.getElementById('admin-section').style.display = '';
         if (u.role === 'owner') loadRecoveryStatus();
       })
       .catch(() => window.location.href = '/login');
@@ -629,6 +691,8 @@
         // Recreated on the server and not yet acknowledged by the owner
         $('recovery-host-hint').classList.toggle('visible', data.notice === true);
         $('recovery-section').hidden = false;
+        $('toc-recovery').hidden = false;
+        updateToc();
         // Link from the notice on other pages: the section was hidden when the page loaded
         if (window.location.hash === '#recovery-title') {
           $('recovery-title').setAttribute('tabindex', '-1');
@@ -754,6 +818,47 @@
       $('recovery-title').setAttribute('tabindex', '-1');
       $('recovery-title').focus();
     }
+
+    // "On this page": mark the block taking the most room on screen. The last block may never
+    // fill the screen, so at the bottom of the page it wins.
+    const tocLinks = [...document.querySelectorAll('.toc a')];
+    function markToc(id) {
+      tocLinks.forEach((a) => {
+        if (a.getAttribute('href') === '#' + id) a.setAttribute('aria-current', 'location');
+        else a.removeAttribute('aria-current');
+      });
+    }
+    let tocLockUntil = 0;
+    function updateToc() {
+      if (Date.now() < tocLockUntil) return;
+      const blocks = [...document.querySelectorAll('.block')].filter((b) => !b.hidden);
+      if (!blocks.length) return;
+      const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+      // The block taking the most room on screen is the one being read
+      let current = blocks[0];
+      let best = -1;
+      if (atBottom) current = blocks[blocks.length - 1];
+      else blocks.forEach((block) => {
+        const r = block.getBoundingClientRect();
+        const visible = Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0);
+        if (visible > best) { best = visible; current = block; }
+      });
+      markToc(current.id);
+    }
+    let tocTicking = false;
+    window.addEventListener('scroll', () => {
+      if (tocTicking) return;
+      tocTicking = true;
+      requestAnimationFrame(() => { updateToc(); tocTicking = false; });
+    }, { passive: true });
+    window.addEventListener('resize', updateToc);
+    document.querySelectorAll('details').forEach((d) => d.addEventListener('toggle', updateToc));
+    // A click in the summary marks its block right away, even if it cannot scroll to the top
+    tocLinks.forEach((a) => a.addEventListener('click', () => {
+      markToc(a.getAttribute('href').slice(1));
+      tocLockUntil = Date.now() + 500;
+    }));
+    updateToc();
 
     // Inline handlers are blocked by the CSP: one delegated listener instead
     const actions = {
