@@ -10,6 +10,8 @@ pub struct Config {
     pub secure_cookies: bool,
     /// Read the client IP from X-Forwarded-For (only behind our own reverse proxy)
     pub trust_proxy: bool,
+    /// Folder of the encrypted backups (BACKUP_DIR). Without it, backups are off.
+    pub backup_dir: Option<std::path::PathBuf>,
 }
 
 impl Config {
@@ -25,6 +27,10 @@ impl Config {
             invitation_duration_hours: optional_i64("INVITATION_DURATION_HOURS", 72),
             secure_cookies: std::env::var("SECURE_COOKIES").as_deref() == Ok("true"),
             trust_proxy: std::env::var("TRUST_PROXY").as_deref() == Ok("true"),
+            backup_dir: env::var("BACKUP_DIR")
+                .ok()
+                .filter(|d| !d.trim().is_empty())
+                .map(std::path::PathBuf::from),
         })
     }
 }

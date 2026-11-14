@@ -1,5 +1,6 @@
 pub mod app;
 pub mod auth;
+pub mod backups;
 pub mod health;
 pub mod invitations;
 pub mod news;
@@ -10,7 +11,7 @@ pub mod users;
 
 use crate::state::AppState;
 use axum::{
-    routing::{get, post},
+    routing::{get, post, put},
     Router,
 };
 
@@ -35,6 +36,12 @@ pub fn api_router() -> Router<AppState> {
             "/recovery-key/notice/dismiss",
             post(recovery_key::dismiss_notice),
         )
+        .route("/backups", get(backups::status))
+        .route("/backups/key", post(backups::create_key))
+        .route("/backups/key/verify", post(backups::verify_key))
+        .route("/backups/settings", put(backups::update_settings))
+        .route("/backups/run", post(backups::run))
+        .route("/backups/files/{name}", get(backups::download))
         .route("/users", get(users::list))
         .route("/users/{id}", axum::routing::delete(users::delete))
         .route(

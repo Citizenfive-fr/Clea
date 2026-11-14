@@ -30,10 +30,17 @@ Utilisation :
   clea new-recovery-key         clé de secours perdue : en crée une nouvelle avec la
                                 clé maîtresse et l'affiche une seule fois. L'ancienne
                                 ne marche plus
+  clea backup                   fait une sauvegarde chiffrée dans BACKUP_DIR
+  clea backup-verify            vérifie les empreintes des sauvegardes de BACKUP_DIR
+  clea restore <sauvegarde> <fichier>
+                                restaure <sauvegarde> (un fichier clea-….backup, avec
+                                son fichier .sha256 à côté) avec la clé de sauvegarde
+                                rangée dans <fichier>.
+                                Dans une base neuve, sans faire le setup
   clea help                     affiche cette aide
 
 <fichier> peut être - pour lire la clé sur l'entrée standard (clea recover - < secours.txt).
-Arrête Cléa avant de lancer recover ou rotate-key.";
+Arrête Cléa avant de lancer recover, rotate-key ou restore.";
 
 pub enum Command {
     Serve,
@@ -41,6 +48,9 @@ pub enum Command {
     Recover(String),
     RotateKey(String),
     NewRecoveryKey,
+    Backup,
+    BackupVerify,
+    Restore(String, String),
 }
 
 /// Parses the arguments after the program name. Unknown input gives the usage text as error.
@@ -51,6 +61,11 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         [cmd, file] if cmd == "recover" => Ok(Command::Recover(file.clone())),
         [cmd, file] if cmd == "rotate-key" => Ok(Command::RotateKey(file.clone())),
         [cmd] if cmd == "new-recovery-key" => Ok(Command::NewRecoveryKey),
+        [cmd] if cmd == "backup" => Ok(Command::Backup),
+        [cmd] if cmd == "backup-verify" => Ok(Command::BackupVerify),
+        [cmd, backup, file] if cmd == "restore" => {
+            Ok(Command::Restore(backup.clone(), file.clone()))
+        }
         _ => Err(USAGE.into()),
     }
 }
@@ -255,7 +270,7 @@ fn renew_recovery(
 }
 
 /// Reads a key from a file, or from standard input when `path` is `-`.
-fn read_key_input(path: &str, what: &str) -> Result<Zeroizing<String>, String> {
+pub fn read_key_input(path: &str, what: &str) -> Result<Zeroizing<String>, String> {
     let mut content = Zeroizing::new(String::new());
     let result = if path == "-" {
         std::io::Read::read_to_string(&mut std::io::stdin(), &mut content).map(|_| ())
@@ -304,6 +319,15 @@ mod tests {
         assert!(
             matches!(parse(&args(&["rotate-key", "k.txt"])), Ok(Command::RotateKey(f)) if f == "k.txt")
         );
+        assert!(matches!(parse(&args(&["backup"])), Ok(Command::Backup)));
+        assert!(matches!(
+            parse(&args(&["backup-verify"])),
+            Ok(Command::BackupVerify)
+        ));
+        assert!(matches!(
+            parse(&args(&["restore", "b.backup", "-"])),
+            Ok(Command::Restore(b, k)) if b == "b.backup" && k == "-"
+        ));
     }
 
     #[test]
@@ -313,5 +337,7 @@ mod tests {
         assert!(parse(&args(&["recover", "a", "b"])).is_err());
         assert!(parse(&args(&["serve"])).is_err());
         assert!(parse(&args(&["new-recovery-key", "k.txt"])).is_err());
+        assert!(parse(&args(&["restore", "b.backup"])).is_err());
+        assert!(parse(&args(&["backup", "x"])).is_err());
     }
 }

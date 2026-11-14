@@ -168,6 +168,26 @@ fn seal(
     aad: &[u8],
     plaintext: &[u8],
 ) -> Result<String, AppError> {
+    Ok(format!(
+        "{prefix}{}",
+        to_hex(&seal_bytes(key, aad, plaintext)?)
+    ))
+}
+
+fn open(key: &[u8; KEY_LEN], prefix: &str, aad: &[u8], stored: &str) -> Result<Vec<u8>, AppError> {
+    let hex = stored
+        .strip_prefix(prefix)
+        .ok_or_else(|| internal("Format chiffré inattendu"))?;
+    let data = from_hex(hex).ok_or_else(|| internal("Valeur chiffrée invalide"))?;
+    open_bytes(key, aad, &data)
+}
+
+/// AES-256-GCM with a random nonce: returns nonce[12] || ciphertext+tag (raw bytes).
+pub(crate) fn seal_bytes(
+    key: &[u8; KEY_LEN],
+    aad: &[u8],
+    plaintext: &[u8],
+) -> Result<Vec<u8>, AppError> {
     let cipher = Aes256Gcm::new_from_slice(key).map_err(|_| internal("Clé invalide"))?;
     // Random 96-bit nonce from the OS random source (getrandom)
     let nonce = Nonce::<Aes256Gcm>::generate();
@@ -182,14 +202,15 @@ fn seal(
         .map_err(|_| internal("Chiffrement échoué"))?;
     let mut out = nonce.to_vec();
     out.extend_from_slice(&ciphertext);
-    Ok(format!("{prefix}{}", to_hex(&out)))
+    Ok(out)
 }
 
-fn open(key: &[u8; KEY_LEN], prefix: &str, aad: &[u8], stored: &str) -> Result<Vec<u8>, AppError> {
-    let hex = stored
-        .strip_prefix(prefix)
-        .ok_or_else(|| internal("Format chiffré inattendu"))?;
-    let data = from_hex(hex).ok_or_else(|| internal("Valeur chiffrée invalide"))?;
+/// Opens what `seal_bytes` made.
+pub(crate) fn open_bytes(
+    key: &[u8; KEY_LEN],
+    aad: &[u8],
+    data: &[u8],
+) -> Result<Vec<u8>, AppError> {
     if data.len() <= NONCE_LEN {
         return Err(internal("Valeur chiffrée invalide"));
     }

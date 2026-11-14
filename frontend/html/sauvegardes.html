@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sauvegardes — Cléa</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    .page-wrap { max-width: 800px; margin: 0 auto; padding: 1rem 0 2rem; }
+    .error-msg { color: var(--danger-fg); font-size: 0.85rem; margin-top: 0.75rem; display: none; }
+    .error-msg.visible { display: block; }
+    /* Backups */
+    .backup-section { margin-top: 1.5rem; padding: 1.5rem; }
+    .section-desc { font-size: 0.9rem; color: var(--soft-fg); line-height: 1.55; margin: -0.5rem 0 1.25rem; }
+    .backup-form { display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap; margin-top: 1rem; }
+    .backup-form .field { flex: 1; min-width: 160px; }
+    .backup-form label { font-size: 0.875rem; font-weight: 500; display: block; margin-bottom: 0.375rem; }
+    .label-row { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.375rem; }
+    .label-row label { margin-bottom: 0; }
+    .help-btn {
+      position: relative; width: 1rem; height: 1rem; padding: 0; border-radius: 50%; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+      font: 500 0.65rem/1 var(--font-text); color: var(--soft-fg);
+      background: transparent; border: 1px solid color-mix(in oklch, var(--soft-fg) 45%, transparent);
+      transition: color 0.15s, border-color 0.15s;
+    }
+    /* Invisible margin: the target stays at least 24px wide (WCAG 2.2) */
+    .help-btn::before { content: ''; position: absolute; inset: -5px; }
+    .help-btn:hover, .help-btn[aria-expanded="true"] { color: var(--fg); border-color: var(--soft-fg); }
+    .help-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+    @media (prefers-reduced-motion: reduce) { .help-btn { transition: none; } }
+    .backup-form input, .backup-form select {
+      width: 100%; background: var(--field-bg); border: 1px solid var(--border);
+      border-radius: 0.6rem; padding: 0.625rem 0.875rem;
+      font-size: 0.875rem; font-family: inherit; color: var(--fg); outline: none;
+    }
+    .backup-form input:focus, .backup-form select:focus { border-color: var(--primary); outline: 2px solid var(--primary); outline-offset: 1px; }
+    .backup-form select option { background: var(--bg); }
+    .backup-form .btn { height: 2.6rem; padding: 0 1rem; }
+    .backup-state { display: flex; flex-wrap: wrap; gap: 0.5rem 2rem; font-size: 0.9rem; margin-bottom: 1rem; }
+    .backup-state strong { font-weight: 600; }
+    .backup-problems { margin: 0 0 1rem; padding: 0.75rem 1rem 0.75rem 2rem; border-radius: 0.6rem;
+      background: var(--danger-bg); border: 1px solid var(--danger-line); color: var(--danger-fg); font-size: 0.85rem; }
+    .backup-sub { font-size: 0.95rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+    .backup-list { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    .backup-list th { text-align: left; font-weight: 500; color: var(--soft-fg); padding: 0.5rem 0.5rem 0.5rem 0; }
+    .backup-list td { padding: 0.6rem 0.5rem 0.6rem 0; border-top: 1px solid var(--frost-line); }
+    .backup-list td:last-child, .backup-list th:last-child { text-align: right; padding-right: 0; }
+    .backup-note { font-size: 0.8rem; color: var(--soft-fg); line-height: 1.5; margin-top: 0.5rem; }
+    .backup-list-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin: 1.5rem 0 0.5rem; }
+    .backup-list-head .backup-sub { margin: 0; }
+    .backup-restore { font-size: 0.9rem; line-height: 1.55; margin-top: 0.75rem; }
+    .backup-restore ol { margin: 0.75rem 0; padding-left: 1.25rem; }
+    .backup-restore li { margin-bottom: 0.4rem; }
+    .row-links { display: inline-flex; gap: 0.9rem; flex-wrap: wrap; justify-content: flex-end; }
+    .backup-section a { color: var(--brand-teal); text-decoration: underline; text-underline-offset: 2px; }
+    .backup-section a:focus-visible, .backup-section summary:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 4px; }
+    .backup-section details { margin-top: 1.5rem; }
+    .backup-section summary { cursor: pointer; font-size: 0.95rem; font-weight: 600; }
+    .backup-key {
+      width: 100%; box-sizing: border-box; resize: none; margin: 0.5rem 0;
+      background: var(--field-bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem;
+      font-family: var(--font-mono); font-size: 0.9rem; line-height: 1.6; color: var(--fg); word-break: break-all;
+    }
+    .backup-key:focus { border-color: var(--primary); outline: 2px solid var(--primary); outline-offset: 2px; }
+    .backup-check { display: flex; gap: 0.625rem; align-items: flex-start; font-size: 0.9rem; margin-top: 0.75rem; cursor: pointer; }
+    .backup-check input { width: 1.15rem; height: 1.15rem; margin-top: 0.1rem; flex-shrink: 0; }
+    .ok-msg { color: var(--success-fg); font-size: 0.85rem; margin-top: 0.75rem; }
+    .ok-msg:empty { display: none; }
+  </style>
+</head>
+<body>
+  <a href="#main" class="sr-only sr-only--focusable">Aller au contenu</a>
+  <div class="page">
+    <div class="animated-bg" aria-hidden="true">
+      <div class="orb orb--cyan"></div>
+      <div class="orb orb--pink"></div>
+      <div class="orb orb--teal"></div>
+    </div>
+
+    <div class="app">
+      {{SIDEBAR:/sauvegardes}}
+      <main class="main" id="main">
+    <div class="page-wrap">
+      <header class="page-intro">
+        <p class="label">Administration</p>
+        <h1 class="page-intro__title">Sauvegardes</h1>
+        <p class="page-intro__desc">
+          Des copies chiffrées de toute la base de Cléa, faites par le serveur. Il peut les créer
+          mais pas les relire : seule la clé de sauvegarde, gardée hors du serveur, permet de
+          les restaurer.
+        </p>
+      </header>
+
+      <section class="backup-section card" id="backup-section" aria-labelledby="backup-title" aria-busy="true">
+        <h2 class="sr-only" id="backup-title" tabindex="-1">État des sauvegardes</h2>
+        <p id="backup-not-configured" hidden>
+          Les sauvegardes ne sont pas configurées sur ce serveur. La personne qui gère le
+          serveur doit indiquer un dossier dans la variable <code>BACKUP_DIR</code>.
+        </p>
+
+        <div id="backup-off" hidden>
+          <p id="backup-off-admin" hidden>Les sauvegardes ne sont pas encore activées. Le propriétaire peut les activer ici.</p>
+          <div id="backup-off-owner" hidden>
+            <p>Pour activer les sauvegardes, Cléa crée une clé de sauvegarde. Elle ne sera affichée qu'une fois.</p>
+            <form class="backup-form" data-form="createKey">
+              <div class="field">
+                <label for="backup-create-password">Ton mot de passe</label>
+                <input id="backup-create-password" type="password" autocomplete="current-password" required>
+              </div>
+              <button type="submit" class="btn btn--primary">Activer les sauvegardes</button>
+            </form>
+          </div>
+        </div>
+
+        <div id="backup-on" hidden>
+          <div class="backup-state">
+            <p>Dernière sauvegarde : <strong id="backup-last">aucune</strong></p>
+            <p>Empreintes : <strong id="backup-fingerprints"></strong></p>
+          </div>
+          <ul class="backup-problems" id="backup-problems" role="alert" hidden></ul>
+          <form class="backup-form" data-form="saveSettings" id="backup-settings" hidden>
+            <div class="field">
+              <label for="backup-frequency">Sauvegarde automatique</label>
+              <select id="backup-frequency">
+                <option value="daily">Chaque jour</option>
+                <option value="weekly">Chaque semaine</option>
+                <option value="monthly">Chaque mois</option>
+                <option value="manual">Jamais (à la main seulement)</option>
+              </select>
+            </div>
+            <div class="field" id="backup-week-day-field" hidden>
+              <label for="backup-week-day">Jour de la semaine</label>
+              <select id="backup-week-day">
+                <option value="1">Lundi</option>
+                <option value="2">Mardi</option>
+                <option value="3">Mercredi</option>
+                <option value="4">Jeudi</option>
+                <option value="5">Vendredi</option>
+                <option value="6">Samedi</option>
+                <option value="7">Dimanche</option>
+              </select>
+            </div>
+            <div class="field" id="backup-month-day-field" hidden>
+              <label for="backup-month-day">Jour du mois</label>
+              <input id="backup-month-day" type="number" min="1" max="28" required aria-describedby="backup-month-day-hint">
+            </div>
+            <div class="field">
+              <span class="label-row">
+                <label for="backup-retention">Conservation (jours)</label>
+                <button type="button" class="help-btn" data-action="toggleHelp" aria-expanded="false" aria-controls="backup-retention-hint"><span aria-hidden="true">?</span><span class="sr-only">À quoi sert la durée de conservation ?</span></button>
+              </span>
+              <input id="backup-retention" type="number" min="1" max="3650" required aria-describedby="backup-retention-hint">
+            </div>
+            <button type="submit" class="btn btn--outline">Enregistrer</button>
+          </form>
+          <p class="hint" id="backup-month-day-hint" style="font-size:0.8rem;color:var(--soft-fg);margin-top:0.5rem" hidden>
+            Jour du mois : de 1 à 28, pour que la date existe chaque mois.
+          </p>
+          <p class="hint" id="backup-retention-hint" style="font-size:0.8rem;color:var(--soft-fg);margin-top:0.5rem" hidden>
+            Passé ce délai, une sauvegarde est supprimée du serveur, avec son empreinte.
+          </p>
+
+          <div class="backup-list-head">
+            <h3 class="backup-sub" id="backup-list-title">Sauvegardes disponibles</h3>
+            <button type="button" class="btn btn--outline" data-action="runBackup" id="backup-run">Sauvegarder maintenant</button>
+          </div>
+          <table class="backup-list" aria-labelledby="backup-list-title">
+            <thead><tr><th>Date</th><th>Taille</th><th><span class="sr-only">Actions</span></th></tr></thead>
+            <tbody id="backup-rows"></tbody>
+          </table>
+          <p class="backup-note" id="backup-fingerprint-note" hidden>
+            Garde l'empreinte avec chaque sauvegarde que tu copies : la commande
+            <code>sha256sum -c</code> vérifie alors que la copie est intacte, sans avoir besoin
+            de la clé.
+          </p>
+
+          <details id="backup-verify" hidden>
+            <summary>Vérifier ma clé de sauvegarde</summary>
+            <p style="font-size:0.9rem;margin-top:0.75rem">
+              Recopie ta clé pour vérifier qu'elle est bonne, avant d'en avoir besoin. Rien n'est modifié.
+            </p>
+            <form class="backup-form" data-form="verifyKey">
+              <div class="field">
+                <label for="backup-verify-key">Clé de sauvegarde</label>
+                <textarea id="backup-verify-key" class="backup-key" rows="3" spellcheck="false"
+                          autocomplete="off" required placeholder="CLEA-BACKUP-KEY-…"></textarea>
+              </div>
+              <button type="submit" class="btn btn--outline">Vérifier</button>
+            </form>
+          </details>
+
+          <details id="backup-replace" hidden>
+            <summary>Remplacer la clé de sauvegarde</summary>
+            <p style="font-size:0.9rem;margin-top:0.75rem">
+              Les prochaines sauvegardes utiliseront la nouvelle clé. Les sauvegardes déjà faites
+              restent liées à l'ancienne : garde-la tant qu'elles existent.
+            </p>
+            <form class="backup-form" data-form="createKey">
+              <div class="field">
+                <label for="backup-replace-password">Ton mot de passe</label>
+                <input id="backup-replace-password" type="password" autocomplete="current-password" required>
+              </div>
+              <button type="submit" class="btn btn--outline">Créer une nouvelle clé</button>
+            </form>
+          </details>
+
+          <details id="backup-restore">
+            <summary>Restaurer une sauvegarde</summary>
+            <div class="backup-restore">
+              <p>
+                La restauration ne se fait pas depuis cette page : elle remplace toute la base, et
+                ta clé de sauvegarde ne doit jamais passer par le serveur. C'est la personne qui
+                gère le serveur qui la lance, avec la commande <code>clea restore</code>.
+              </p>
+              <ol>
+                <li>Il faut le fichier de la sauvegarde, son empreinte (<code>.sha256</code>) et la même clé maîtresse qu'avant.</li>
+                <li>Cléa est arrêtée et la sauvegarde est restaurée dans une base neuve.</li>
+                <li>Le propriétaire transmet sa clé de sauvegarde au dernier moment, sans l'envoyer par e-mail.</li>
+                <li>Tout le monde se reconnecte. Ce qui a été fait après la sauvegarde est perdu.</li>
+              </ol>
+              <p>
+                Le détail est sur <a href="https://git.citizenfive.fr/Citizenfive-fr/Clea/wiki/Sauvegardes" target="_blank" rel="noopener noreferrer">la page du wiki sur les sauvegardes (s'ouvre dans un nouvel onglet)</a>.
+              </p>
+            </div>
+          </details>
+        </div>
+
+        <div id="backup-newkey" hidden>
+          <h3 class="backup-sub" id="backup-newkey-title" tabindex="-1">Ta clé de sauvegarde</h3>
+          <p id="backup-newkey-help" style="font-size:0.9rem;line-height:1.55">
+            <strong>Elle ne sera plus jamais affichée.</strong> Garde-la hors de ce serveur,
+            imprimée et rangée dans un endroit sûr, à part de la clé de secours. Sans elle,
+            aucune sauvegarde ne peut être restaurée.
+          </p>
+          <label for="backup-newkey-value" class="sr-only">Clé de sauvegarde</label>
+          <textarea id="backup-newkey-value" class="backup-key" rows="4" readonly spellcheck="false"
+                    autocomplete="off" aria-describedby="backup-newkey-help"></textarea>
+          <button type="button" class="btn btn--outline" data-action="copyBackupKey">Copier la clé</button>
+          <label class="backup-check">
+            <input type="checkbox" id="backup-newkey-saved">
+            <span>J'ai rangé cette clé dans un endroit sûr</span>
+          </label>
+          <button type="button" class="btn btn--primary" id="backup-newkey-done" data-action="finishBackupKey" style="margin-top:0.75rem" disabled>Terminer</button>
+        </div>
+
+        <p class="error-msg" id="backup-error" role="alert"></p>
+        <p class="ok-msg" id="backup-ok" role="status" aria-live="polite"></p>
+      </section>
+    </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    function escHtml(str) {
+      return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    // --- Backups ---
+    const $ = (id) => document.getElementById(id);
+    let backupKeyPending = false;
+
+    function backupMessage(error, ok) {
+      $('backup-error').textContent = error || '';
+      $('backup-error').classList.toggle('visible', !!error);
+      $('backup-ok').textContent = ok || '';
+    }
+
+    function formatDate(iso) {
+      const d = new Date(iso);
+      return isNaN(d) ? iso : d.toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' });
+    }
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return `${bytes} o`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1).replace('.', ',')} Ko`;
+      return `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} Mo`;
+    }
+
+    async function loadBackups() {
+      const res = await fetch('/api/backups').catch(() => null);
+      $('backup-section').setAttribute('aria-busy', 'false');
+      if (!res || !res.ok) {
+        const d = res ? await res.json().catch(() => ({})) : {};
+        backupMessage(d.error || 'Impossible de charger les sauvegardes.');
+        return;
+      }
+      const b = await res.json();
+      $('backup-not-configured').hidden = b.configured;
+      $('backup-off').hidden = !b.configured || b.enabled;
+      $('backup-off-owner').hidden = !b.can_manage;
+      $('backup-off-admin').hidden = b.can_manage;
+      $('backup-on').hidden = !b.configured || !b.enabled;
+      if (!b.configured || !b.enabled) return;
+
+      const last = b.backups[0];
+      $('backup-last').textContent = last ? formatDate(last.at) : 'aucune';
+      $('backup-fingerprints').textContent = !b.backups.length
+        ? '—'
+        : b.problems.length ? 'problème détecté' : 'toutes bonnes';
+      const problems = $('backup-problems');
+      problems.hidden = !b.problems.length;
+      problems.innerHTML = b.problems.map(p => `<li>${escHtml(p)}</li>`).join('');
+
+      $('backup-settings').hidden = !b.can_manage;
+      $('backup-replace').hidden = !b.can_manage;
+      $('backup-verify').hidden = !b.can_manage;
+      $('backup-fingerprint-note').hidden = !b.can_manage;
+      $('backup-frequency').value = b.frequency;
+      $('backup-retention').value = b.retention_days;
+      $('backup-month-day').value = b.month_day;
+      $('backup-week-day').value = String(b.week_day);
+      toggleScheduleDay();
+
+      $('backup-rows').innerHTML = b.backups.length
+        ? b.backups.map(r => `
+          <tr>
+            <td>${escHtml(formatDate(r.at))}</td>
+            <td>${escHtml(formatSize(r.size))}</td>
+            <td>${b.can_manage
+              ? `<span class="row-links">
+                  <a href="/api/backups/files/${encodeURIComponent(r.file)}" download>Télécharger<span class="sr-only"> la sauvegarde du ${escHtml(formatDate(r.at))}</span></a>
+                  <a href="/api/backups/files/${encodeURIComponent(r.file)}.sha256" download>Empreinte<span class="sr-only"> de la sauvegarde du ${escHtml(formatDate(r.at))}</span></a>
+                </span>`
+              : ''}</td>
+          </tr>`).join('')
+        : '<tr><td colspan="3" style="color:var(--soft-fg)">Aucune sauvegarde pour le moment.</td></tr>';
+    }
+
+    async function runBackup() {
+      backupMessage();
+      const btn = $('backup-run');
+      btn.disabled = true;
+      btn.textContent = 'Sauvegarde en cours…';
+      try {
+        const res = await fetch('/api/backups/run', { method: 'POST' });
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) { backupMessage(d.error || 'Erreur.'); return; }
+        backupMessage('', 'Sauvegarde faite.');
+        loadBackups();
+      } catch {
+        backupMessage('Impossible de contacter le serveur.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Sauvegarder maintenant';
+      }
+    }
+
+    async function verifyKey() {
+      backupMessage();
+      const res = await fetch('/api/backups/key/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ backup_key: $('backup-verify-key').value.trim() }),
+      }).catch(() => null);
+      if (!res) { backupMessage('Impossible de contacter le serveur.'); return; }
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { backupMessage(d.error || 'Erreur.'); return; }
+      $('backup-verify-key').value = '';
+      const n = d.backups;
+      const count = `${n} sauvegarde${n > 1 ? 's' : ''}`;
+      if (d.status === 'current') {
+        backupMessage('', `C'est bien ta clé de sauvegarde actuelle. Elle permet de restaurer ${count}.`);
+      } else if (d.status === 'old') {
+        backupMessage('', `C'est une ancienne clé de sauvegarde. Garde-la : ${count} en dépend${n > 1 ? 'ent' : ''} encore.`);
+      } else {
+        backupMessage("Cette clé ne correspond ni à la clé actuelle, ni à une sauvegarde disponible.");
+      }
+    }
+
+    async function saveSettings() {
+      backupMessage();
+      const res = await fetch('/api/backups/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          frequency: $('backup-frequency').value,
+          retention_days: Number($('backup-retention').value),
+          month_day: Number($('backup-month-day').value),
+          week_day: Number($('backup-week-day').value),
+        }),
+      }).catch(() => null);
+      if (!res) { backupMessage('Impossible de contacter le serveur.'); return; }
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        backupMessage(d.error || 'Erreur.');
+        return;
+      }
+      backupMessage('', 'Réglages enregistrés.');
+    }
+
+    async function createKey(form) {
+      backupMessage();
+      const input = form.querySelector('input[type="password"]');
+      const res = await fetch('/api/backups/key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: input.value }),
+      }).catch(() => null);
+      if (!res) { backupMessage('Impossible de contacter le serveur.'); return; }
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { backupMessage(d.error || 'Erreur.'); return; }
+      input.value = '';
+      $('backup-off').hidden = true;
+      $('backup-on').hidden = true;
+      $('backup-newkey-value').value = d.backup_key;
+      $('backup-newkey-saved').checked = false;
+      $('backup-newkey-done').disabled = true;
+      $('backup-newkey').hidden = false;
+      $('backup-newkey-title').focus();
+      backupKeyPending = true;
+      window.addEventListener('beforeunload', warnBeforeLeaving);
+    }
+
+    function warnBeforeLeaving(e) {
+      if (backupKeyPending) { e.preventDefault(); e.returnValue = ''; }
+    }
+
+    async function copyBackupKey() {
+      try {
+        await navigator.clipboard.writeText($('backup-newkey-value').value);
+        backupMessage('', 'Clé copiée.');
+      } catch {
+        $('backup-newkey-value').focus();
+        $('backup-newkey-value').select();
+        backupMessage('', 'Copie automatique impossible : la clé est sélectionnée, fais Ctrl+C.');
+      }
+    }
+
+    // The day field only shows for the frequency that uses it
+    function toggleScheduleDay() {
+      const frequency = $('backup-frequency').value;
+      const weekly = frequency === 'weekly';
+      const monthly = frequency === 'monthly';
+      $('backup-week-day-field').hidden = !weekly;
+      $('backup-week-day').disabled = !weekly;
+      $('backup-month-day-field').hidden = !monthly;
+      $('backup-month-day').disabled = !monthly;
+      $('backup-month-day-hint').hidden = !monthly;
+    }
+    $('backup-frequency').addEventListener('change', toggleScheduleDay);
+
+    $('backup-newkey-saved').addEventListener('change', (e) => { $('backup-newkey-done').disabled = !e.target.checked; });
+
+    function finishBackupKey() {
+      if (!$('backup-newkey-saved').checked) return;
+      backupKeyPending = false;
+      window.removeEventListener('beforeunload', warnBeforeLeaving);
+      $('backup-newkey-value').value = '';
+      $('backup-newkey').hidden = true;
+      backupMessage('', 'Sauvegardes activées. La première sera faite dans les 15 minutes, ou tout de suite avec « Sauvegarder maintenant ».');
+      loadBackups().then(() => $('backup-title').focus());
+    }
+
+    document.addEventListener('submit', (e) => {
+      const form = e.target.closest('[data-form]');
+      if (!form) return;
+      e.preventDefault();
+      if (form.dataset.form === 'createKey') createKey(form);
+      if (form.dataset.form === 'saveSettings') saveSettings();
+      if (form.dataset.form === 'verifyKey') verifyKey();
+    });
+
+    // Inline handlers are blocked by the CSP: one delegated listener instead
+    document.addEventListener('click', (e) => {
+      const el = e.target.closest('[data-action]');
+      if (!el) return;
+      const { action } = el.dataset;
+      if (action === 'toggleHelp') {
+        const open = el.getAttribute('aria-expanded') !== 'true';
+        el.setAttribute('aria-expanded', String(open));
+        $(el.getAttribute('aria-controls')).hidden = !open;
+      }
+      if (action === 'runBackup') runBackup();
+      if (action === 'copyBackupKey') copyBackupKey();
+      if (action === 'finishBackupKey') finishBackupKey();
+    });
+
+    loadBackups();
+  </script>
+  <script src="/js/recovery-notice.js"></script>
+</body>
+</html>

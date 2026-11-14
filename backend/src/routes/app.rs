@@ -166,10 +166,19 @@ pub async fn actualites_page(State(state): State<AppState>, headers: HeaderMap) 
 }
 
 pub async fn team_page(State(state): State<AppState>, headers: HeaderMap) -> Response {
-    match get_role(&state, &headers).await {
+    manager_page(&state, &headers, "team.html").await
+}
+
+pub async fn backups_page(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    manager_page(&state, &headers, "sauvegardes.html").await
+}
+
+/// Pages for owners and admins only: a member is sent back to the dashboard.
+async fn manager_page(state: &AppState, headers: &HeaderMap, file: &str) -> Response {
+    match get_role(state, headers).await {
         None => Redirect::to("/login").into_response(),
         Some(role) if role == "member" => Redirect::to("/app").into_response(),
-        _ => render_page("team.html", true, &[("{{TEAM_HIDDEN}}", "")]).await,
+        _ => render_page(file, true, &[("{{TEAM_HIDDEN}}", "")]).await,
     }
 }
 

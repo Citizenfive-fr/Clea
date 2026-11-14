@@ -21,7 +21,7 @@ use crate::{
 };
 
 type Kem = X25519HkdfSha256;
-type PrivateKey = <Kem as KemTrait>::PrivateKey;
+pub(crate) type PrivateKey = <Kem as KemTrait>::PrivateKey;
 type PublicKey = <Kem as KemTrait>::PublicKey;
 type EncappedKey = <Kem as KemTrait>::EncappedKey;
 
@@ -29,6 +29,7 @@ const INFO: &[u8] = b"clea/recovery/v1";
 const PUBLIC_PREFIX: &str = "p1:";
 const LOCKED_PREFIX: &str = "r1:";
 const DISPLAY_PREFIX: &str = "CLEA-RECOVERY-KEY-";
+const CHECKSUM_DOMAIN: &[u8] = b"clea/recovery-checksum/v1\0";
 const ENCAPPED_LEN: usize = 32;
 const CHECKSUM_HEX: usize = 4;
 
@@ -42,68 +43,42 @@ pub struct NewRecoveryKey {
 pub struct RecoverySecret(PrivateKey);
 
 pub fn generate() -> NewRecoveryKey {
-    let (private_key, public_key) = Kem::gen_keypair();
-    let secret = Zeroizing::new(private_key.to_bytes().to_vec());
+    let (public_key, secret) = generate_pair();
     NewRecoveryKey {
-        public_key: format!("{PUBLIC_PREFIX}{}", to_hex(&public_key.to_bytes())),
+        public_key: format!("{PUBLIC_PREFIX}{}", to_hex(&public_key)),
         secret_display: display(&secret),
     }
+}
+
+/// New HPKE key pair as raw bytes: (public key, private key). Shared with backup keys.
+pub(crate) fn generate_pair() -> (Vec<u8>, Zeroizing<Vec<u8>>) {
+    let (private_key, public_key) = Kem::gen_keypair();
+    (
+        public_key.to_bytes().to_vec(),
+        Zeroizing::new(private_key.to_bytes().to_vec()),
+    )
 }
 
 impl RecoverySecret {
     /// Parses the displayed form. Tolerates upper/lower case, spaces and line breaks.
     pub fn parse(input: &str) -> Result<Self, AppError> {
-        let compact: Zeroizing<String> = Zeroizing::new(
-            input
-                .chars()
-                .filter(|c| !c.is_whitespace() && *c != '-')
-                .collect::<String>()
-                .to_ascii_lowercase(),
-        );
-        let prefix = DISPLAY_PREFIX.replace('-', "").to_ascii_lowercase();
-        let body = compact
-            .strip_prefix(&prefix)
-            .ok_or_else(|| bad_secret("elle doit commencer par CLEA-RECOVERY-KEY-"))?;
-        if body.len() != KEY_LEN * 2 + CHECKSUM_HEX {
-            return Err(bad_secret("longueur incorrecte"));
-        }
-        let (key_hex, checksum) = body.split_at(KEY_LEN * 2);
-        let bytes =
-            Zeroizing::new(from_hex(key_hex).ok_or_else(|| bad_secret("caractère invalide"))?);
-        if checksum != checksum_of(&bytes) {
-            return Err(bad_secret("contrôle invalide"));
-        }
-        let private_key = PrivateKey::from_bytes(&bytes).map_err(|_| bad_secret("clé invalide"))?;
-        Ok(Self(private_key))
+        parse_displayed(input, DISPLAY_PREFIX, CHECKSUM_DOMAIN, bad_secret).map(Self)
     }
 
     /// Public key matching this secret, in the stored `p1:` format.
     pub fn public_key(&self) -> String {
-        format!(
-            "{PUBLIC_PREFIX}{}",
-            to_hex(&Kem::sk_to_pk(&self.0).to_bytes())
-        )
+        format!("{PUBLIC_PREFIX}{}", to_hex(&public_of(&self.0)))
     }
 }
 
 /// Locks an organization key for the recovery public key (bound to the organization id).
 pub fn lock_for_recovery(public_key: &str, org_id: Uuid, key: &OrgKey) -> Result<String, AppError> {
-    let hex = public_key
+    let bytes = public_key
         .strip_prefix(PUBLIC_PREFIX)
+        .and_then(from_hex)
         .ok_or_else(|| internal("Clé publique de secours invalide"))?;
-    let bytes = from_hex(hex).ok_or_else(|| internal("Clé publique de secours invalide"))?;
-    let public_key =
-        PublicKey::from_bytes(&bytes).map_err(|_| internal("Clé publique de secours invalide"))?;
-    let (encapped, ciphertext) = hpke::single_shot_seal::<AesGcm256, HkdfSha256, Kem>(
-        &OpModeS::Base,
-        &public_key,
-        INFO,
-        key.as_bytes(),
-        org_id.as_bytes(),
-    )
-    .map_err(|_| internal("Chiffrement pour la clé de secours échoué"))?;
-    let mut out = encapped.to_bytes().to_vec();
-    out.extend_from_slice(&ciphertext);
+    let out = seal(&bytes, INFO, org_id.as_bytes(), key.as_bytes())
+        .map_err(|_| internal("Chiffrement pour la clé de secours échoué"))?;
     Ok(format!("{LOCKED_PREFIX}{}", to_hex(&out)))
 }
 
@@ -113,33 +88,113 @@ pub fn unlock_with_recovery(
     org_id: Uuid,
     locked: &str,
 ) -> Result<OrgKey, AppError> {
-    let hex = locked
+    let data = locked
         .strip_prefix(LOCKED_PREFIX)
         .ok_or_else(|| internal("Format de clé de secours inattendu"))?;
-    let data = from_hex(hex).ok_or_else(|| internal("Clé enfermée invalide"))?;
-    if data.len() <= ENCAPPED_LEN {
-        return Err(internal("Clé enfermée invalide"));
-    }
-    let (encapped, ciphertext) = data.split_at(ENCAPPED_LEN);
-    let encapped =
-        EncappedKey::from_bytes(encapped).map_err(|_| internal("Clé enfermée invalide"))?;
-    let bytes = Zeroizing::new(
-        hpke::single_shot_open::<AesGcm256, HkdfSha256, Kem>(
-            &OpModeR::Base,
-            &secret.0,
-            &encapped,
-            INFO,
-            ciphertext,
-            org_id.as_bytes(),
-        )
-        .map_err(|_| internal("Cette clé de secours n'ouvre pas la clé de l'organisation"))?,
-    );
+    let data = from_hex(data).ok_or_else(|| internal("Clé enfermée invalide"))?;
+    let bytes = Zeroizing::new(open(&secret.0, INFO, org_id.as_bytes(), &data).map_err(
+        |e| match e {
+            OpenError::Format => internal("Clé enfermée invalide"),
+            OpenError::Key => internal("Cette clé de secours n'ouvre pas la clé de l'organisation"),
+        },
+    )?);
     OrgKey::from_key_bytes(&bytes)
 }
 
+/// Why an HPKE box did not open: damaged data, or not the right private key / context.
+pub(crate) enum OpenError {
+    Format,
+    Key,
+}
+
+/// Public key bytes of a private key.
+pub(crate) fn public_of(secret: &PrivateKey) -> Vec<u8> {
+    Kem::sk_to_pk(secret).to_bytes().to_vec()
+}
+
+/// HPKE single-shot encryption for a public key: returns encapsulated key || ciphertext.
+/// `info` separates uses (recovery, backups), `aad` binds the box to its owner (an id).
+pub(crate) fn seal(
+    public_key: &[u8],
+    info: &[u8],
+    aad: &[u8],
+    plaintext: &[u8],
+) -> Result<Vec<u8>, ()> {
+    let public_key = PublicKey::from_bytes(public_key).map_err(|_| ())?;
+    let (encapped, ciphertext) = hpke::single_shot_seal::<AesGcm256, HkdfSha256, Kem>(
+        &OpModeS::Base,
+        &public_key,
+        info,
+        plaintext,
+        aad,
+    )
+    .map_err(|_| ())?;
+    let mut out = encapped.to_bytes().to_vec();
+    out.extend_from_slice(&ciphertext);
+    Ok(out)
+}
+
+/// Opens a box made by `seal` with the matching private key.
+pub(crate) fn open(
+    secret: &PrivateKey,
+    info: &[u8],
+    aad: &[u8],
+    data: &[u8],
+) -> Result<Vec<u8>, OpenError> {
+    if data.len() <= ENCAPPED_LEN {
+        return Err(OpenError::Format);
+    }
+    let (encapped, ciphertext) = data.split_at(ENCAPPED_LEN);
+    let encapped = EncappedKey::from_bytes(encapped).map_err(|_| OpenError::Format)?;
+    hpke::single_shot_open::<AesGcm256, HkdfSha256, Kem>(
+        &OpModeR::Base,
+        secret,
+        &encapped,
+        info,
+        ciphertext,
+        aad,
+    )
+    .map_err(|_| OpenError::Key)
+}
+
+/// Parses a displayed private key (`prefix` + hex groups + checksum group).
+/// Tolerates upper/lower case, spaces and line breaks. `bad` builds the error for the user.
+pub(crate) fn parse_displayed(
+    input: &str,
+    prefix: &str,
+    domain: &[u8],
+    bad: fn(&str) -> AppError,
+) -> Result<PrivateKey, AppError> {
+    let compact: Zeroizing<String> = Zeroizing::new(
+        input
+            .chars()
+            .filter(|c| !c.is_whitespace() && *c != '-')
+            .collect::<String>()
+            .to_ascii_lowercase(),
+    );
+    let prefix_compact = prefix.replace('-', "").to_ascii_lowercase();
+    let body = compact
+        .strip_prefix(&prefix_compact)
+        .ok_or_else(|| bad(&format!("elle doit commencer par {prefix}")))?;
+    if body.len() != KEY_LEN * 2 + CHECKSUM_HEX {
+        return Err(bad("longueur incorrecte"));
+    }
+    let (key_hex, checksum) = body.split_at(KEY_LEN * 2);
+    let bytes = Zeroizing::new(from_hex(key_hex).ok_or_else(|| bad("caractère invalide"))?);
+    if checksum != checksum_of(domain, &bytes) {
+        return Err(bad("contrôle invalide"));
+    }
+    PrivateKey::from_bytes(&bytes).map_err(|_| bad("clé invalide"))
+}
+
 fn display(secret: &[u8]) -> Zeroizing<String> {
+    display_with(DISPLAY_PREFIX, CHECKSUM_DOMAIN, secret)
+}
+
+/// Displayed form of a private key: `prefix` + groups of 4 hex characters + checksum group.
+pub(crate) fn display_with(prefix: &str, domain: &[u8], secret: &[u8]) -> Zeroizing<String> {
     let hex = Zeroizing::new(to_hex(secret));
-    let mut out = Zeroizing::new(String::from(DISPLAY_PREFIX));
+    let mut out = Zeroizing::new(String::from(prefix));
     for (i, chunk) in hex.as_bytes().chunks(4).enumerate() {
         if i > 0 {
             out.push('-');
@@ -147,14 +202,14 @@ fn display(secret: &[u8]) -> Zeroizing<String> {
         out.push_str(std::str::from_utf8(chunk).unwrap_or_default());
     }
     out.push('-');
-    out.push_str(&checksum_of(secret));
+    out.push_str(&checksum_of(domain, secret));
     out
 }
 
 /// Short checksum to detect a badly copied key (not a security feature).
-fn checksum_of(secret: &[u8]) -> String {
+fn checksum_of(domain: &[u8], secret: &[u8]) -> String {
     let mut hasher = Sha256::new();
-    hasher.update(b"clea/recovery-checksum/v1\0");
+    hasher.update(domain);
     hasher.update(secret);
     to_hex(&hasher.finalize()[..CHECKSUM_HEX / 2])
 }
