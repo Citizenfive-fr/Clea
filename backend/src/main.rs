@@ -1,7 +1,9 @@
 mod audit;
 mod backup;
 mod cli;
+mod commands;
 mod config;
+mod console;
 mod error;
 mod keys;
 mod password;
@@ -18,22 +20,36 @@ use std::net::SocketAddr;
 
 #[tokio::main]
 async fn main() {
-    // Without RUST_LOG, fmt::init() only shows errors: warnings would be invisible. Default to info.
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
-        )
-        .init();
-    dotenvy::dotenv().ok();
-
     let args: Vec<String> = std::env::args().skip(1).collect();
     let command = cli::parse(&args).unwrap_or_else(|usage| {
         eprintln!("{usage}");
         std::process::exit(2);
     });
+
+    // Without RUST_LOG, fmt::init() only shows errors: warnings would be invisible. Default to
+    // info for the server, warnings only for the console (its screen stays readable).
+    let default_level = if matches!(command, cli::Command::Console) {
+        "warn"
+    } else {
+        "info"
+    };
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(default_level)),
+        )
+        .init();
+    dotenvy::dotenv().ok();
     if let cli::Command::Help = command {
         println!("{}", cli::USAGE);
+        return;
+    }
+    // Needs neither the database nor the keys
+    if let cli::Command::UpdateCheck = command {
+        if let Err(e) = commands::update_check().await {
+            eprintln!("{e}");
+            std::process::exit(1);
+        }
         return;
     }
 
@@ -59,159 +75,33 @@ async fn main() {
             std::process::exit(1);
         });
 
-    match command {
-        cli::Command::Recover(file) => {
-            match cli::recover(&db, &config.master_key, &file).await {
-                Ok(recovered) => {
-                    for org in &recovered {
-                        println!(
-                            "Organisation « {} » : clé récupérée et enfermée avec la nouvelle \
-                             clé maîtresse.",
-                            org.name
-                        );
-                        print_new_recovery_key(&org.new_recovery_key);
-                    }
-                    let shred = if file == "-" {
-                        "shred -u <fichier>".to_string()
-                    } else {
-                        format!("shred -u {file}")
-                    };
-                    println!(
-                        "Supprime maintenant le fichier de l'ancienne clé de secours \
-                         ({shred}), puis relance Cléa."
-                    );
-                }
-                Err(e) => {
-                    eprintln!("{e}");
-                    std::process::exit(1);
-                }
-            }
-            if let Err(e) = keys::check_org_keys(&db, &config.master_key).await {
-                eprintln!(
-                    "Attention, une autre organisation ne s'ouvre pas avec cette clé maîtresse : {e}\n\
-                     Son propriétaire doit lancer clea recover avec sa propre clé de secours."
-                );
-            }
-            return;
-        }
-        cli::Command::RotateKey(file) => {
-            match cli::rotate_key(&db, &config.master_key, &file).await {
-                Ok(count) => println!(
-                    "Clé maîtresse changée pour {count} organisation(s).\n\
-                     L'ancienne clé ne marche plus : mets la nouvelle dans APP_SECRET_KEY \
-                     ou APP_KEY_FILE, puis relance Cléa."
-                ),
-                Err(e) => {
-                    eprintln!("{e}");
-                    std::process::exit(1);
-                }
-            }
-            return;
-        }
-        cli::Command::NewRecoveryKey => {
-            match cli::new_recovery_key(&db, &config.master_key).await {
-                Ok(renewed) => {
-                    for org in &renewed {
-                        println!("Organisation « {} » :", org.name);
-                        print_new_recovery_key(&org.new_recovery_key);
-                    }
-                }
-                Err(e) => {
-                    eprintln!("{e}");
-                    std::process::exit(1);
-                }
-            }
-            return;
-        }
-        cli::Command::Backup => {
-            let dir = backup_dir_or_exit(&config);
-            match backup::run(&db, &dir).await {
-                Ok(r) => println!("Sauvegarde faite : {} ({} octets).", r.file, r.size),
-                Err(e) => {
-                    eprintln!("{e}");
-                    std::process::exit(1);
-                }
-            }
-            match backup::purge(&db, &dir).await {
-                Ok(0) => {}
-                Ok(n) => println!("{n} sauvegarde(s) expirée(s) supprimée(s)."),
-                Err(e) => eprintln!("Suppression des sauvegardes expirées échouée : {e}"),
-            }
-            return;
-        }
-        cli::Command::BackupVerify => {
-            let dir = backup_dir_or_exit(&config);
-            match backup::list(&dir) {
-                Ok(backups) if backup::problems(&backups).is_empty() => println!(
-                    "{} sauvegarde(s), toutes les empreintes sont bonnes.",
-                    backups.len()
-                ),
-                Ok(backups) => {
-                    eprintln!("Problèmes trouvés :");
-                    for p in backup::problems(&backups) {
-                        eprintln!("- {p}");
-                    }
-                    std::process::exit(1);
-                }
-                Err(e) => {
-                    eprintln!("{e}");
-                    std::process::exit(1);
-                }
-            }
-            return;
-        }
+    let result = match command {
+        cli::Command::Recover(file) => commands::recover(&db, &config, &file).await,
+        cli::Command::RotateKey(file) => commands::rotate_key(&db, &config, &file).await,
+        cli::Command::NewRecoveryKey => commands::new_recovery_key(&db, &config).await,
+        cli::Command::Backup => commands::backup(&db, &config).await,
+        cli::Command::BackupVerify => commands::backup_verify(&config),
         cli::Command::Restore(file, key_file) => {
-            let secret = match cli::read_key_input(&key_file, "la clé de sauvegarde") {
-                Ok(s) => s,
-                Err(e) => {
-                    eprintln!("{e}");
-                    std::process::exit(1);
-                }
-            };
-            match backup::restore(
-                &db,
-                &config.master_key,
-                std::path::Path::new(&file),
-                &secret,
-            )
-            .await
-            {
-                Ok(r) => {
-                    println!("Sauvegarde {} restaurée.", r.file);
-                    if !r.fingerprint_checked {
-                        println!(
-                            "Attention : pas de fichier d'empreinte (.sha256) à côté de la \
-                             sauvegarde. Le déchiffrement a tout de même vérifié que le \
-                             fichier n'était pas abîmé."
-                        );
-                    }
-                    if !r.master_key_opens {
-                        println!(
-                            "Attention : la clé maîtresse actuelle n'ouvre pas la clé de \
-                             l'organisation de cette sauvegarde, Cléa refusera de démarrer. \
-                             Remets l'ancienne clé maîtresse, ou si elle est perdue, lance \
-                             clea recover avec la clé de secours."
-                        );
-                    }
-                    println!(
-                        "Les sessions ne sont pas sauvegardées : tout le monde devra se \
-                         reconnecter. Relance Cléa."
-                    );
-                }
-                Err(e) => {
-                    eprintln!("{e}");
-                    std::process::exit(1);
-                }
-            }
-            return;
+            commands::restore(&db, &config, std::path::Path::new(&file), &key_file).await
         }
-        cli::Command::Serve | cli::Command::Help => {}
-    }
-
-    if let Err(e) = keys::check_org_keys(&db, &config.master_key).await {
-        tracing::error!("{}", e);
+        cli::Command::Console => {
+            console::run(&db, &config).await;
+            Ok(())
+        }
+        cli::Command::Serve | cli::Command::Help | cli::Command::UpdateCheck => {
+            serve(db, config).await
+        }
+    };
+    if let Err(e) = result {
+        eprintln!("{e}");
         std::process::exit(1);
     }
+}
+
+async fn serve(db: sqlx::PgPool, config: config::Config) -> Result<(), String> {
+    keys::check_org_keys(&db, &config.master_key).await?;
+    // Kept until the server stops: tells the host commands that Cléa is running
+    let _server_lock = commands::hold_server_lock(&db).await;
 
     tracing::info!("Base de données prête");
 
@@ -283,21 +173,5 @@ async fn main() {
     )
     .await
     .unwrap();
-}
-
-/// BACKUP_DIR is required by the backup commands.
-fn backup_dir_or_exit(config: &config::Config) -> std::path::PathBuf {
-    config.backup_dir.clone().unwrap_or_else(|| {
-        eprintln!("BACKUP_DIR n'est pas défini : indique le dossier des sauvegardes.");
-        std::process::exit(1);
-    })
-}
-
-/// Shows a new recovery key once, with what to do with it.
-fn print_new_recovery_key(key: &str) {
-    println!(
-        "\nL'ancienne clé de secours ne marche plus. Voici la nouvelle, affichée une seule \
-         fois. Garde-la hors de ce serveur, imprimée et rangée dans un \
-         endroit sûr. Ne la transmets à personne :\n\n{key}\n"
-    );
+    Ok(())
 }

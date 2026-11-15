@@ -19,6 +19,8 @@ use crate::{
 pub const USAGE: &str = "\
 Utilisation :
   clea                          lance le serveur
+  clea console                  console d'administration : toutes les commandes
+                                ci-dessous, expliquées, dans un menu
   clea recover <fichier>        clé maîtresse perdue : rouvre la clé de l'organisation
                                 avec la clé de secours rangée dans <fichier>, puis
                                 l'enferme avec la nouvelle clé maîtresse
@@ -32,14 +34,26 @@ Utilisation :
                                 ne marche plus
   clea backup                   fait une sauvegarde chiffrée dans BACKUP_DIR
   clea backup-verify            vérifie les empreintes des sauvegardes de BACKUP_DIR
-  clea restore <sauvegarde> <fichier>
-                                restaure <sauvegarde> (un fichier clea-….backup, avec
-                                son fichier .sha256 à côté) avec la clé de sauvegarde
-                                rangée dans <fichier>.
-                                Dans une base neuve, sans faire le setup
+  clea restore <fichier> <clé>  restaure la sauvegarde <fichier> (clea-….backup, avec
+                                son .sha256 à côté) dans une base neuve, sans setup.
+                                La clé de sauvegarde est lue dans le fichier <clé>
+  clea update-check             cherche une nouvelle version stable sur la forge
+                                (uniquement quand tu la lances, rien n'est installé)
   clea help                     affiche cette aide
 
-<fichier> peut être - pour lire la clé sur l'entrée standard (clea recover - < secours.txt).
+Les clés se donnent toujours dans un fichier, jamais tapées dans la commande.
+
+Sans Docker, Cléa lit le fichier toute seule :
+  clea recover /root/secours.txt
+  clea restore /srv/backups/clea-….backup /root/cle-sauvegarde.txt
+
+Avec Docker, le conteneur ne voit pas les fichiers de ta machine. Remplace le
+chemin de la clé par un tiret (-), puis ajoute le signe inférieur (<) et le
+fichier. Ton terminal lit le fichier sur ta machine et passe son contenu à la
+commande. La clé ne s'affiche pas et ne reste pas dans l'historique. Exemples :
+  docker compose run --rm -T app recover - < /root/secours.txt
+  docker compose run --rm -T app restore /app/backups/clea-….backup - < cle.txt
+
 Arrête Cléa avant de lancer recover, rotate-key ou restore.";
 
 pub enum Command {
@@ -51,6 +65,8 @@ pub enum Command {
     Backup,
     BackupVerify,
     Restore(String, String),
+    Console,
+    UpdateCheck,
 }
 
 /// Parses the arguments after the program name. Unknown input gives the usage text as error.
@@ -62,6 +78,8 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         [cmd, file] if cmd == "rotate-key" => Ok(Command::RotateKey(file.clone())),
         [cmd] if cmd == "new-recovery-key" => Ok(Command::NewRecoveryKey),
         [cmd] if cmd == "backup" => Ok(Command::Backup),
+        [cmd] if cmd == "console" => Ok(Command::Console),
+        [cmd] if cmd == "update-check" => Ok(Command::UpdateCheck),
         [cmd] if cmd == "backup-verify" => Ok(Command::BackupVerify),
         [cmd, backup, file] if cmd == "restore" => {
             Ok(Command::Restore(backup.clone(), file.clone()))
@@ -320,6 +338,11 @@ mod tests {
             matches!(parse(&args(&["rotate-key", "k.txt"])), Ok(Command::RotateKey(f)) if f == "k.txt")
         );
         assert!(matches!(parse(&args(&["backup"])), Ok(Command::Backup)));
+        assert!(matches!(parse(&args(&["console"])), Ok(Command::Console)));
+        assert!(matches!(
+            parse(&args(&["update-check"])),
+            Ok(Command::UpdateCheck)
+        ));
         assert!(matches!(
             parse(&args(&["backup-verify"])),
             Ok(Command::BackupVerify)
