@@ -30,6 +30,8 @@
     .block__title + .row { border-top: 0; }
     .row__label { display: block; font-size: 0.9375rem; font-weight: 600; }
     .row__desc { margin-top: 0.375rem; font-size: 0.8125rem; line-height: 1.55; color: var(--soft-fg); max-width: 34ch; }
+    .row__desc a { color: var(--brand-teal); text-decoration: underline; text-underline-offset: 2px; }
+    .row__desc a:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 2px; }
     /* Rows holding a tall form keep their label at the top */
     .row--top { align-items: start; }
     .row__value { font-size: 0.95rem; font-weight: 500; overflow-wrap: anywhere; padding-top: 0.05rem; }
@@ -300,6 +302,9 @@
               <p class="row__desc">
                 Elle permet de récupérer les données chiffrées de l'organisation si la clé maîtresse
                 du serveur est perdue. Cléa ne la garde pas : seule ta copie existe.
+              </p>
+              <p class="row__desc">
+                La clé de sauvegarde, elle, se gère dans <a href="/sauvegardes">Sauvegardes</a>.
               </p>
             </div>
             <div class="row__body">

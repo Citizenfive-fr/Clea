@@ -31,6 +31,9 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
+    volumes:
+      # Encrypted backups: copy this folder to another place (disk, server)
+      - backups:/app/backups
     environment:
       DATABASE_URL: postgres://clea:${POSTGRES_PASSWORD}@db:5432/clea
       APP_SECRET_KEY: ${APP_SECRET_KEY}
@@ -40,6 +43,8 @@ services:
       TRUST_PROXY: "true"
       SESSION_DURATION_HOURS: "24"
       INVITATION_DURATION_HOURS: "72"
+      BACKUP_DIR: /app/backups
 
 volumes:
   postgres_data:
+  backups:

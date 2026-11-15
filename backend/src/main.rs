@@ -1,4 +1,5 @@
 mod audit;
+mod backup;
 mod cli;
 mod config;
 mod error;
@@ -122,6 +123,88 @@ async fn main() {
             }
             return;
         }
+        cli::Command::Backup => {
+            let dir = backup_dir_or_exit(&config);
+            match backup::run(&db, &dir).await {
+                Ok(r) => println!("Sauvegarde faite : {} ({} octets).", r.file, r.size),
+                Err(e) => {
+                    eprintln!("{e}");
+                    std::process::exit(1);
+                }
+            }
+            match backup::purge(&db, &dir).await {
+                Ok(0) => {}
+                Ok(n) => println!("{n} sauvegarde(s) expirée(s) supprimée(s)."),
+                Err(e) => eprintln!("Suppression des sauvegardes expirées échouée : {e}"),
+            }
+            return;
+        }
+        cli::Command::BackupVerify => {
+            let dir = backup_dir_or_exit(&config);
+            match backup::list(&dir) {
+                Ok(backups) if backup::problems(&backups).is_empty() => println!(
+                    "{} sauvegarde(s), toutes les empreintes sont bonnes.",
+                    backups.len()
+                ),
+                Ok(backups) => {
+                    eprintln!("Problèmes trouvés :");
+                    for p in backup::problems(&backups) {
+                        eprintln!("- {p}");
+                    }
+                    std::process::exit(1);
+                }
+                Err(e) => {
+                    eprintln!("{e}");
+                    std::process::exit(1);
+                }
+            }
+            return;
+        }
+        cli::Command::Restore(file, key_file) => {
+            let secret = match cli::read_key_input(&key_file, "la clé de sauvegarde") {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("{e}");
+                    std::process::exit(1);
+                }
+            };
+            match backup::restore(
+                &db,
+                &config.master_key,
+                std::path::Path::new(&file),
+                &secret,
+            )
+            .await
+            {
+                Ok(r) => {
+                    println!("Sauvegarde {} restaurée.", r.file);
+                    if !r.fingerprint_checked {
+                        println!(
+                            "Attention : pas de fichier d'empreinte (.sha256) à côté de la \
+                             sauvegarde. Le déchiffrement a tout de même vérifié que le \
+                             fichier n'était pas abîmé."
+                        );
+                    }
+                    if !r.master_key_opens {
+                        println!(
+                            "Attention : la clé maîtresse actuelle n'ouvre pas la clé de \
+                             l'organisation de cette sauvegarde, Cléa refusera de démarrer. \
+                             Remets l'ancienne clé maîtresse, ou si elle est perdue, lance \
+                             clea recover avec la clé de secours."
+                        );
+                    }
+                    println!(
+                        "Les sessions ne sont pas sauvegardées : tout le monde devra se \
+                         reconnecter. Relance Cléa."
+                    );
+                }
+                Err(e) => {
+                    eprintln!("{e}");
+                    std::process::exit(1);
+                }
+            }
+            return;
+        }
         cli::Command::Serve | cli::Command::Help => {}
     }
 
@@ -156,6 +239,18 @@ async fn main() {
         }
     });
 
+    // Background task: scheduled backups and deletion of expired ones
+    if let Some(dir) = config.backup_dir.clone() {
+        let db_backup = db.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(900));
+            loop {
+                interval.tick().await;
+                backup::scheduled(&db_backup, &dir).await;
+            }
+        });
+    }
+
     let state = state::AppState::new(db, config);
 
     // Background task: purge expired rate-limit entries and pending 2FA tokens
@@ -188,6 +283,14 @@ async fn main() {
     )
     .await
     .unwrap();
+}
+
+/// BACKUP_DIR is required by the backup commands.
+fn backup_dir_or_exit(config: &config::Config) -> std::path::PathBuf {
+    config.backup_dir.clone().unwrap_or_else(|| {
+        eprintln!("BACKUP_DIR n'est pas défini : indique le dossier des sauvegardes.");
+        std::process::exit(1);
+    })
 }
 
 /// Shows a new recovery key once, with what to do with it.
