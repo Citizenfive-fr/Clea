@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cléa : connexion à ton serveur</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="card">
+    <img src="icon.png" alt="" class="logo" width="56" height="56">
+    <h1>Bienvenue dans Cléa</h1>
+    <p class="desc">
+      Cléa est installée sur un serveur. Indique son adresse : la personne qui gère ce
+      serveur te l'a donnée.
+    </p>
+    <form id="form" novalidate>
+      <label for="server">Adresse de ton Cléa</label>
+      <input id="server" type="url" inputmode="url" autocomplete="url" required
+             placeholder="https://clea.monentreprise.fr" aria-describedby="hint error">
+      <p id="hint" class="hint">L'adresse commence par https://</p>
+      <p id="error" class="error" role="alert"></p>
+      <button type="submit">Se connecter</button>
+    </form>
+  </main>
+  <script src="main.js"></script>
+</body>
+</html>

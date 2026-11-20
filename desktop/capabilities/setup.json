@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "setup",
+  "description": "Local setup page only: saves the server address. The Cléa window (remote site) gets no capability at all.",
+  "windows": ["setup"],
+  "permissions": ["allow-set-server"]
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Cléa",
+  "version": "0.1.0",
+  "identifier": "fr.citizenfive.clea",
+  "build": {
+    "frontendDist": "ui"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["appimage", "deb"],
+    "category": "Business",
+    "shortDescription": "Application de bureau pour Cléa",
+    "longDescription": "Se connecte à ton instance Cléa (outil libre et auto-hébergé de conformité RGPD) et l'ouvre dans sa propre fenêtre.",
+    "license": "AGPL-3.0-only",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/256x256.png", "icons/icon.png"]
+  }
+}

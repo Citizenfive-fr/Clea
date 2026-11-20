@@ -1,6 +1,9 @@
 # Build artifacts
 backend/target/
 
+# Desktop app (built apart, not in the server image)
+desktop/
+
 # Secrets
 **/.env
 **/*.env

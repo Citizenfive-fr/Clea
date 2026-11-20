@@ -97,7 +97,18 @@ async fn include_sidebar(html: &str) -> Option<String> {
     Some(out)
 }
 
-const HOME_NAV_SIGNED_IN: &str = r#"<nav class="home__nav" aria-label="Mon compte"><a href="/profile"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Mon profil</a></nav>"#;
+const PROFILE_LINK: &str = r#"<a href="/profile"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Mon profil</a>"#;
+
+/// Only in the desktop app (its user agent contains `CleaDesktop`): the app catches this
+/// link and opens its "change server" window. In a browser the link would do nothing.
+const CHANGE_SERVER_LINK: &str = r#"<a href="clea-app:changer-serveur"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4 3 8l4 4"/><path d="M3 8h18"/><path d="m17 20 4-4-4-4"/><path d="M21 16H3"/></svg>Changer de serveur</a>"#;
+
+fn is_desktop_app(headers: &HeaderMap) -> bool {
+    headers
+        .get(header::USER_AGENT)
+        .and_then(|ua| ua.to_str().ok())
+        .is_some_and(|ua| ua.contains("CleaDesktop"))
+}
 
 /// Whether the first-launch setup is done (true on a database error, so /setup stays closed).
 pub async fn setup_done(state: &AppState) -> bool {
@@ -113,21 +124,31 @@ pub async fn index_page(State(state): State<AppState>, headers: HeaderMap) -> Re
     if !setup_done(&state).await {
         return Redirect::to("/setup").into_response();
     }
-    let cta = if get_role(&state, &headers).await.is_some() {
-        [
-            ("{{CTA_HREF}}", "/app"),
-            ("{{CTA_LABEL}}", "Ouvrir l'app"),
-            ("{{HOME_NAV}}", HOME_NAV_SIGNED_IN),
-        ]
+    let signed_in = get_role(&state, &headers).await.is_some();
+    let (cta_href, cta_label) = if signed_in {
+        ("/app", "Ouvrir l'app")
     } else {
-        [
-            ("{{CTA_HREF}}", "/login"),
-            ("{{CTA_LABEL}}", "Se connecter"),
-            ("{{HOME_NAV}}", ""),
-        ]
+        ("/login", "Se connecter")
     };
-    // The button depends on the session: never cache this page
-    render_page("index.html", true, &cta).await
+    let mut links = String::new();
+    if is_desktop_app(&headers) {
+        links.push_str(CHANGE_SERVER_LINK);
+    }
+    if signed_in {
+        links.push_str(PROFILE_LINK);
+    }
+    let nav = if links.is_empty() {
+        String::new()
+    } else {
+        format!(r#"<nav class="home__nav" aria-label="Raccourcis">{links}</nav>"#)
+    };
+    let replacements = [
+        ("{{CTA_HREF}}", cta_href),
+        ("{{CTA_LABEL}}", cta_label),
+        ("{{HOME_NAV}}", nav.as_str()),
+    ];
+    // The page depends on the session and the app: never cache it
+    render_page("index.html", true, &replacements).await
 }
 
 pub async fn invite_page() -> Response {
