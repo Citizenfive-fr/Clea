@@ -1,7 +1,7 @@
 use axum::{
     extract::{ConnectInfo, State},
     http::{HeaderMap, StatusCode},
-    response::{IntoResponse, Response},
+    response::{IntoResponse, Redirect, Response},
     Json,
 };
 use serde::{Deserialize, Serialize};
@@ -22,7 +22,11 @@ use crate::{
     validation,
 };
 
-pub async fn login_page() -> Response {
+/// Before the first-launch setup there is no account yet: go to /setup instead.
+pub async fn login_page(State(state): State<AppState>) -> Response {
+    if !crate::routes::app::setup_done(&state).await {
+        return Redirect::to("/setup").into_response();
+    }
     crate::routes::app::html_page("login.html", false).await
 }
 

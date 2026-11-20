@@ -99,15 +99,18 @@ async fn include_sidebar(html: &str) -> Option<String> {
 
 const HOME_NAV_SIGNED_IN: &str = r#"<nav class="home__nav" aria-label="Mon compte"><a href="/profile"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Mon profil</a></nav>"#;
 
+/// Whether the first-launch setup is done (true on a database error, so /setup stays closed).
+pub async fn setup_done(state: &AppState) -> bool {
+    sqlx::query_scalar::<_, bool>("SELECT completed FROM setup_state WHERE id = 1")
+        .fetch_one(&state.db)
+        .await
+        .unwrap_or(true)
+}
+
 /// Entry page of the instance: first launch goes to /setup. The main button leads to /app
 /// for a signed-in user, to /login otherwise.
 pub async fn index_page(State(state): State<AppState>, headers: HeaderMap) -> Response {
-    let setup_done =
-        sqlx::query_scalar::<_, bool>("SELECT completed FROM setup_state WHERE id = 1")
-            .fetch_one(&state.db)
-            .await
-            .unwrap_or(true);
-    if !setup_done {
+    if !setup_done(&state).await {
         return Redirect::to("/setup").into_response();
     }
     let cta = if get_role(&state, &headers).await.is_some() {
