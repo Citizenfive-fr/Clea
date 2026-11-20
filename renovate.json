@@ -3,10 +3,18 @@
   "extends": ["config:recommended"],
   "prHourlyLimit": 0,
   "osvVulnerabilityAlerts": true,
+  "labels": ["dependencies"],
+  "assignees": ["Citizenfive"],
   "packageRules": [
     {
       "matchUpdateTypes": ["major"],
       "dependencyDashboardApproval": true
+    },
+    {
+      "description": "L'app manipule les fenêtres de Tauri avec gtk et webkit2gtk : elles doivent rester aux versions de Tauri et se mettent à jour avec lui",
+      "matchFileNames": ["desktop/Cargo.toml"],
+      "matchPackageNames": ["gtk", "webkit2gtk"],
+      "enabled": false
     }
   ],
   "customManagers": [
