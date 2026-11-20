@@ -4,6 +4,9 @@
 #                                         $XDG_CACHE_HOME/tauri), chacun vérifié par son SHA-256
 #   ./appimage-tools.sh check <dossier>   après `cargo tauri build` : échoue si Tauri a téléchargé
 #                                         un outil absent de la liste (nouvelle version de Tauri)
+#   ./appimage-tools.sh tauri <version>   vérifie que la liste contient le linuxdeploy et l'AppRun
+#                                         attendus par cette version de tauri-cli (lu dans son code
+#                                         publié sur crates.io, sans l'installer)
 #   ./appimage-tools.sh update            recalcule les SHA-256 après avoir changé une adresse,
 #                                         puis relire la différence avant de commiter
 set -eu
@@ -40,6 +43,36 @@ check)
         fi
     done
     ;;
+tauri)
+    version=${2:?version de tauri-cli manquante}
+    tmp=$(mktemp -d)
+    trap 'rm -rf "$tmp"' EXIT
+    crate() {
+        curl -fsSL --proto '=https' "https://static.crates.io/crates/$1/$1-$2.crate" | tar -xz -C "$tmp"
+    }
+    # tauri-cli fabrique l'AppImage avec tauri-bundler : sa version est dans le Cargo.lock publié
+    crate tauri-cli "$version"
+    bundler=$(grep -A1 '^name = "tauri-bundler"$' "$tmp/tauri-cli-$version/Cargo.lock" \
+        | sed -n 's/^version = "\(.*\)"$/\1/p')
+    crate tauri-bundler "$bundler"
+    src="$tmp/tauri-bundler-$bundler/src/bundle/linux/appimage/linuxdeploy.rs"
+    if [ ! -f "$src" ]; then
+        echo "tauri-bundler $bundler n'a plus linuxdeploy.rs au même endroit : à vérifier à la main" >&2
+        exit 1
+    fi
+    commit=$(sed -n 's/.*LINUXDEPLOY_COMMIT_HASH: &str = "\([0-9a-f]*\)".*/\1/p' "$src")
+    apprun=$(sed -n 's|.*/releases/download/\(apprun-[^/]*\)/AppRun-.*|\1|p' "$src")
+    if [ -z "$commit" ] || [ -z "$apprun" ]; then
+        echo "Impossible de lire les outils attendus par tauri-bundler $bundler : à vérifier à la main" >&2
+        exit 1
+    fi
+    if ! tools | grep -q " linuxdeploy-$commit-x86_64.AppImage " \
+        || ! tools | grep -q "/releases/download/$apprun/AppRun-x86_64$"; then
+        echo "tauri-cli $version attend linuxdeploy $commit et AppRun $apprun : mettre à jour $LIST" >&2
+        exit 1
+    fi
+    echo "tauri-cli $version (tauri-bundler $bundler) : linuxdeploy $commit et AppRun $apprun, conformes à la liste"
+    ;;
 update)
     tmp=$(mktemp -d)
     trap 'rm -rf "$tmp"' EXIT
@@ -54,7 +87,7 @@ update)
     git diff -- "$LIST"
     ;;
 *)
-    echo "Usage : $0 fetch <dossier> | check <dossier> | update" >&2
+    echo "Usage : $0 fetch <dossier> | check <dossier> | tauri <version> | update" >&2
     exit 1
     ;;
 esac

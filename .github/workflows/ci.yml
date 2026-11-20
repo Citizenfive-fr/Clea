@@ -47,3 +47,10 @@ jobs:
       - name: Check the AppImage tools
         run: ./appimage-tools.sh fetch "$GITHUB_WORKSPACE/.cache/tauri"
         working-directory: desktop
+      # Une mise à jour de tauri-cli (release.yml) qui attend un autre linuxdeploy échoue ici
+      # aussi, plutôt que le jour de la release
+      - name: Check the tools expected by tauri-cli
+        run: |
+          VERSION=$(sed -n 's/^ *TAURI_CLI_VERSION: \([^ ]*\) .*/\1/p' ../.github/workflows/release.yml)
+          ./appimage-tools.sh tauri "$VERSION"
+        working-directory: desktop
