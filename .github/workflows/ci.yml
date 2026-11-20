@@ -9,20 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: backend
-      - name: Check
-        run: cargo check --locked
-        working-directory: backend
-
+  # Vérifie aussi que le serveur compile : l'image lance `cargo build --release --locked`
   docker-build:
     runs-on: ubuntu-latest
     steps:
@@ -36,3 +23,27 @@ jobs:
       - name: Clean up
         if: always()
         run: docker rmi clea:ci || true
+
+  desktop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install system libraries
+        run: |
+          SUDO=""; [ "$(id -u)" -eq 0 ] || SUDO=sudo
+          $SUDO apt-get update -qq
+          $SUDO apt-get install -y -qq --no-install-recommends \
+            build-essential pkg-config curl file libwebkit2gtk-4.1-dev libxdo-dev librsvg2-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop
+      - name: Check and test
+        run: cargo check --locked && cargo test --locked
+        working-directory: desktop
+      # Une mise à jour de Tauri ou du greffon qui change un outil de l'AppImage échoue ici, dans sa PR
+      - name: Check the AppImage tools
+        run: ./appimage-tools.sh fetch "$GITHUB_WORKSPACE/.cache/tauri"
+        working-directory: desktop

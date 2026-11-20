@@ -8,5 +8,25 @@
       "matchUpdateTypes": ["major"],
       "dependencyDashboardApproval": true
     }
+  ],
+  "customManagers": [
+    {
+      "description": "tauri-cli utilisé par la release pour fabriquer l'app de bureau",
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github/workflows/release\\.yml$/"],
+      "matchStrings": [
+        "TAURI_CLI_VERSION: (?<currentValue>\\S+) # renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)"
+      ]
+    },
+    {
+      "description": "Greffon AppImage figé dans desktop/appimage-tools.txt (son SHA-256 se met à jour à la main : ./appimage-tools.sh update)",
+      "customType": "regex",
+      "managerFilePatterns": ["/^desktop/appimage-tools\\.txt$/"],
+      "matchStrings": [
+        "https://github\\.com/(?<depName>linuxdeploy/linuxdeploy-plugin-appimage)/releases/download/(?<currentValue>[^/]+)/"
+      ],
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "regex:^1-alpha-(?<major>\\d+)-(?<minor>\\d+)$"
+    }
   ]
 }

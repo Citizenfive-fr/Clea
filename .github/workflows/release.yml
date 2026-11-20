@@ -85,3 +85,89 @@ jobs:
         run: |
           docker logout "$REGISTRY" || true
           docker rmi -f $(docker images -q "${IMAGE}") 2>/dev/null || true
+
+  # App de bureau (.deb et AppImage), même version que la release, attachée à la release
+  # avec SHA256SUMS signé par la clé Cosign du dépôt
+  desktop:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      # Tauri cherche les outils de l'AppImage dans $XDG_CACHE_HOME/tauri
+      XDG_CACHE_HOME: ${{ github.workspace }}/.cache
+      # Pas de FUSE dans le runner : les outils AppImage s'extraient à la place
+      APPIMAGE_EXTRACT_AND_RUN: "1"
+      TAURI_CLI_VERSION: 2.12.6 # renovate: datasource=crate depName=tauri-cli
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # envsubst (gettext-base) pour cosign-installer, le reste pour compiler l'app
+      - name: Install system libraries
+        run: |
+          SUDO=""; [ "$(id -u)" -eq 0 ] || SUDO=sudo
+          $SUDO apt-get update -qq
+          $SUDO apt-get install -y -qq --no-install-recommends \
+            gettext-base build-essential pkg-config curl file xdg-utils \
+            libwebkit2gtk-4.1-dev libxdo-dev librsvg2-dev
+
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install tauri-cli
+        run: cargo install tauri-cli --version "=${TAURI_CLI_VERSION}" --locked
+
+      - name: Compute version
+        id: version
+        run: echo "full=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: AppImage tools (versions figées, SHA-256 vérifiés)
+        run: ./appimage-tools.sh fetch "$XDG_CACHE_HOME/tauri"
+        working-directory: desktop
+
+      - name: Build
+        env:
+          VERSION: ${{ steps.version.outputs.full }}
+        run: cargo tauri build --config "{\"version\":\"${VERSION}\"}"
+        working-directory: desktop
+
+      # Une nouvelle version de Tauri peut vouloir un autre linuxdeploy : il doit passer par appimage-tools.txt
+      - name: Check that only the fixed tools were used
+        run: ./appimage-tools.sh check "$XDG_CACHE_HOME/tauri"
+        working-directory: desktop
+
+      - name: Collect and hash
+        env:
+          VERSION: ${{ steps.version.outputs.full }}
+        run: |
+          mkdir dist
+          cp desktop/target/release/bundle/deb/*.deb "dist/clea_${VERSION}_amd64.deb"
+          cp desktop/target/release/bundle/appimage/*.AppImage "dist/clea_${VERSION}_amd64.AppImage"
+          cd dist && sha256sum clea_* > SHA256SUMS && cat SHA256SUMS
+
+      # Une seule signature couvre les deux paquets : leurs SHA-256 sont dans SHA256SUMS
+      - name: Sign
+        env:
+          COSIGN_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: cosign sign-blob --yes --key env://COSIGN_KEY --bundle dist/SHA256SUMS.sigstore.json dist/SHA256SUMS
+
+      # Vérifie comme le ferait une utilisatrice : une mauvaise signature fait échouer la release
+      - name: Verify
+        run: |
+          cosign verify-blob --key cosign.pub --bundle dist/SHA256SUMS.sigstore.json dist/SHA256SUMS
+          cd dist && sha256sum -c SHA256SUMS
+
+      - name: Attach to the release
+        env:
+          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          ASSETS_URL: ${{ github.server_url }}/api/v1/repos/${{ github.repository }}/releases/${{ github.event.release.id }}/assets
+        run: |
+          for FILE in dist/*; do
+            NAME=$(basename "$FILE")
+            curl -fsS --proto '=https' -o /dev/null \
+              -H "Authorization: token ${RELEASE_TOKEN}" \
+              -F "attachment=@${FILE}" "${ASSETS_URL}?name=${NAME}"
+            echo "Attached ${NAME}"
+          done
