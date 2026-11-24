@@ -1,0 +1,53 @@
+name: Desktop
+
+# L'app est longue à compiler (WebKitGTK, Tauri) : ce job ne tourne que si un fichier qui la
+# concerne change. La release, elle, fabrique toujours l'app.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "desktop/**"
+      - ".github/workflows/desktop.yml"
+      - ".github/workflows/release.yml"
+      - "renovate.json"
+  pull_request:
+    paths:
+      - "desktop/**"
+      - ".github/workflows/desktop.yml"
+      - ".github/workflows/release.yml"
+      - "renovate.json"
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install system libraries
+        run: |
+          SUDO=""; [ "$(id -u)" -eq 0 ] || SUDO=sudo
+          $SUDO apt-get update -qq
+          $SUDO apt-get install -y -qq --no-install-recommends \
+            build-essential pkg-config curl file libwebkit2gtk-4.1-dev libxdo-dev librsvg2-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop
+      - name: Check and test
+        run: cargo check --locked && cargo test --locked
+        working-directory: desktop
+      # Une mise à jour de Tauri ou du greffon qui change un outil de l'AppImage échoue ici, dans sa PR
+      - name: Check the AppImage tools
+        run: ./appimage-tools.sh fetch "$GITHUB_WORKSPACE/.cache/tauri"
+        working-directory: desktop
+      # Une mise à jour de tauri-cli (release.yml) qui attend un autre linuxdeploy échoue ici
+      # aussi, plutôt que le jour de la release
+      - name: Check the tools expected by tauri-cli
+        run: |
+          VERSION=$(sed -n 's/^ *TAURI_CLI_VERSION: \([^ ]*\) .*/\1/p' ../.github/workflows/release.yml)
+          ./appimage-tools.sh tauri "$VERSION"
+        working-directory: desktop
