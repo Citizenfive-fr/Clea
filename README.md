@@ -4,7 +4,7 @@
 
 > La conformité RGPD sans prestataire ni abonnement. Open-source, self-hosted, privacy by design.
 
-> ⚠️ Projet en cours de développement actif, pas encore prêt pour la production.
+> ⚠ Projet en cours de développement actif, pas encore prêt pour la production.
 
 ---
 
@@ -16,7 +16,7 @@ Cléa est un outil **open-source** et **auto-hébergé** qui vous accompagne
 
 Cléa vous **guide à chacune des étapes** : de la compréhension du règlement et des textes qui l'entourent jusqu'au maintien de votre conformité dans le temps.
 
-> ⚠️ Cet outil **n'a pas pour but** de faire votre conformité à votre place !
+> ⚠ Cet outil **n'a pas pour but** de faire votre conformité à votre place !
 
 ---
 
