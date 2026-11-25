@@ -35,7 +35,8 @@ impl Config {
     }
 }
 
-/// 64 hex characters = 256 random bits, what `openssl rand -hex 64` (128 chars) easily exceeds
+/// 64 hex characters = 256 random bits: the minimum is `openssl rand -hex 32`, the advised
+/// `openssl rand -hex 64` (128 chars) gives some margin
 const MASTER_KEY_MIN_HEX: usize = 64;
 
 /// APP_KEY_FILE (a file holding the key, e.g. a Docker secret) wins over APP_SECRET_KEY.
@@ -62,7 +63,7 @@ pub fn check_master_key(key: String, source: &str) -> Result<String, String> {
     if key.len() < MASTER_KEY_MIN_HEX || !key.bytes().all(|b| b.is_ascii_hexdigit()) {
         return Err(format!(
             "Clé maîtresse invalide dans {source} : il faut au moins {MASTER_KEY_MIN_HEX} \
-             caractères hexadécimaux (générer avec : openssl rand -hex 64)"
+             caractères hexadécimaux (minimum : openssl rand -hex 32, conseillé : openssl rand -hex 64)"
         ));
     }
     Ok(key)
