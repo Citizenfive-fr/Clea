@@ -50,7 +50,9 @@ impl AppState {
             http: reqwest::Client::builder()
                 .timeout(Duration::from_secs(10))
                 .redirect(reqwest::redirect::Policy::limited(3))
-                .user_agent("Clea/0.1 RGPD compliance tool")
+                // Identifiant neutre : les flux n'apprennent ni que c'est Cléa, ni sa version.
+                // Un identifiant reste envoyé, certains sites refusent les requêtes sans.
+                .user_agent("Mozilla/5.0")
                 .build()
                 .expect("HTTP client creation failed"),
             news_cache: Arc::new(Mutex::new(HashMap::new())),
