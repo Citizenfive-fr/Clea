@@ -1,0 +1,9 @@
+[Desktop Entry]
+Categories={{categories}}
+Comment=Ouvre ton instance Cléa dans sa propre fenêtre
+Exec={{exec}}
+StartupWMClass={{exec}}
+Icon={{icon}}
+Name=Cléa
+Terminal=false
+Type=Application
